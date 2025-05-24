@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>    
+    <AssemblyName>Distenka.Diagnostics</AssemblyName>
+    <RootNamespace>Distenka.Diagnostics</RootNamespace>
+
+    <PackAsTool>true</PackAsTool>
+
+    <PackageIcon>logo.png</PackageIcon>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" Version="2.3.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Distenka\Distenka.csproj" />
+  </ItemGroup>
+
+</Project>

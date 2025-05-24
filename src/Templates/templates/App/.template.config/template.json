@@ -1,0 +1,30 @@
+{
+	"$schema": "http://json.schemastore.org/template",
+	"author": "Distenka",
+	"classifications": [ "Common", "Console" ],
+	"identity": "Distenka.Templates.App",
+	"name": "Distenka Application",
+	"shortName": "Distenka-app",
+	"tags": {
+		"language": "C#",
+		"type": "project"
+	},
+	"symbols": {
+		"Processname": {
+			"type": "parameter",
+			"datatype": "string",
+			"description": "Renames files containing 'NewProcess'",
+			"replaces": "NewProcess",
+			"FileRename": "NewProcess",
+			"defaultValue": "NewProcess"
+		},
+		"appname": {
+			"type": "parameter",
+			"datatype": "string",
+			"description": "Renames files containing 'NewDistenkaApp'",
+			"replaces": "NewDistenkaApp",
+			"FileRename": "NewDistenkaApp",
+			"defaultValue": "NewDistenkaApp"
+		}
+	}
+}

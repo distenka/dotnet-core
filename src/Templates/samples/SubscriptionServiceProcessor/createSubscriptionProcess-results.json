@@ -1,0 +1,117 @@
+{
+  "configPath": "D:\\Projects\\SubscriptionServiceProcessor\\CreateSubscriptionProcess.json",
+  "startedAt": "2025-05-24T09:30:24.9627964Z",
+  "completedAt": "2025-05-24T09:30:26.1748767Z",
+  "disposition": "Successful",
+  "methods": {
+    "InitializeAsync": {
+      "method": 0,
+      "isSuccessful": true,
+      "exception": null,
+      "error": null,
+      "duration": "00:00:00.0000449"
+    },
+    "GetItemsAsync": {
+      "method": 1,
+      "isSuccessful": true,
+      "exception": null,
+      "error": null,
+      "duration": "00:00:00.0002333"
+    },
+    "GetEnumerator": {
+      "method": 3,
+      "isSuccessful": true,
+      "exception": null,
+      "error": null,
+      "duration": "00:00:00.0014348"
+    },
+    "Count": {
+      "method": 2,
+      "isSuccessful": true,
+      "exception": null,
+      "error": null,
+      "duration": "00:00:00.0000785"
+    },
+    "FinalizeAsync": {
+      "method": 8,
+      "isSuccessful": true,
+      "exception": null,
+      "error": null,
+      "duration": "00:00:00.0006818"
+    }
+  },
+  "items": [
+    {
+      "id": "ProcessAsync",
+      "isSuccessful": true,
+      "failedDueToException": false,
+      "category": "Successful",
+      "output": {
+        "userId": 2233,
+        "subscriptionId": 3
+      },
+      "methods": {
+        "EnumeratorMoveNext": {
+          "method": 4,
+          "isSuccessful": true,
+          "exception": null,
+          "error": null,
+          "duration": "00:00:00.0007910"
+        },
+        "EnumeratorCurrent": {
+          "method": 5,
+          "isSuccessful": true,
+          "exception": null,
+          "error": null,
+          "duration": "00:00:00.0000598"
+        },
+        "GetItemIdAsync": {
+          "method": 6,
+          "isSuccessful": true,
+          "exception": null,
+          "error": null,
+          "duration": "00:00:00.0000384"
+        },
+        "ProcessAsync": {
+          "method": 7,
+          "isSuccessful": true,
+          "exception": null,
+          "error": null,
+          "duration": "00:00:01.2007107"
+        }
+      },
+      "enumeratorMoveNext": {
+        "method": 4,
+        "isSuccessful": true,
+        "exception": null,
+        "error": null,
+        "duration": "00:00:00.0007910"
+      },
+      "enumeratorCurrent": {
+        "method": 5,
+        "isSuccessful": true,
+        "exception": null,
+        "error": null,
+        "duration": "00:00:00.0000598"
+      },
+      "getItemIdAsync": {
+        "method": 6,
+        "isSuccessful": true,
+        "exception": null,
+        "error": null,
+        "duration": "00:00:00.0000384"
+      },
+      "processAsync": {
+        "method": 7,
+        "isSuccessful": true,
+        "exception": null,
+        "error": null,
+        "duration": "00:00:01.2007107"
+      }
+    }
+  ],
+  "totalItemCount": null,
+  "successfulItemCount": 1,
+  "failedItemCount": 0,
+  "output": null
+}

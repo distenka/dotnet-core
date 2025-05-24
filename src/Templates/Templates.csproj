@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageType>Template</PackageType>
+    <PackageId>Distenka.Templates</PackageId>
+
+    <Title>Distenka Process Templates</Title>
+    <Authors>Karim Fahmy</Authors>
+    <Company>Distenka</Company>
+
+    <Description>Templates for creating Distenka Processes for .NET Core</Description>
+    <PackageTags>Distenka;ai;vibe-coding;serverless;awesome;Processor;batch</PackageTags>
+    <Copyright>Copyright © Distenka</Copyright>
+    <PackageProjectUrl>https://www.distenka.ai/</PackageProjectUrl>
+    <TargetFramework>net8.0</TargetFramework>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**" />
+    <Compile Remove="**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="samples\SubscriptionServiceProcessor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" Version="2.3.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,32 @@
+{
+  "profiles": {
+    "WSL": {
+      "commandName": "WSL2",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "distributionName": ""
+    },
+    "List": {
+      "commandName": "Project",
+      "commandLineArgs": "list",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Run TestProcess": {
+      "commandName": "Project",
+      "commandLineArgs": "TestProcess",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Get TestProcess": {
+      "commandName": "Project",
+      "commandLineArgs": "list",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
