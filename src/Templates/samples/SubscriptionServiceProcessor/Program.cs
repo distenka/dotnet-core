@@ -31,7 +31,7 @@ public class Program
 				services.AddSingleton<IStripeClient, StripeClient>();
 				services.AddSingleton<IPlaidClient, PlaidClient>();
 
-				// Add Runly jobs
+				// Add distenka process
 				services.AddScoped<CreateSubscriptionProcess>();
 				services.AddScoped<AddBankAccountProcess>();
 				services.AddScoped<ActivateSubscriptionProcess>();
