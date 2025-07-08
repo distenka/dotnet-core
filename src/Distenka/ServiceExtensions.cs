@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Distenka.Client;
 using Distenka.Hosting;
 using System;
 using System.Collections.Generic;
@@ -347,7 +346,6 @@ namespace Distenka
                 s.GetRequiredService<IHostApplicationLifetime>(),
                 s,
 				s.GetRequiredService<ILogger<RunAction>>(),
-				s.GetService<BroadCastChannel>(),
 				s.GetService<Debug>()
 			));
 		}
