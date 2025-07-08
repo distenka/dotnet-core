@@ -41,6 +41,7 @@ Documentation coming soon on:
 ## 🚀: Get Started
 
 Check `/src/Templates/samples/` **SubscriptionServiceProcessor** example processor
+- ```dotnet add package Distenka --version 1.5.0-beta```
 
 - It includes processes for managing subscriptions and bank accounts, such as creating, modifying, activating, and deactivating subscriptions, as well as adding and validating bank accounts.
 
