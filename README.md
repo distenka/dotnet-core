@@ -1,6 +1,6 @@
 # Overview
 
-Build in couple of hours & reduce cost/time for your current/next feature
+Build in a couple of hours & reduce cost/time for your current/next feature
 
 ![Logo](https://avatars.githubusercontent.com/u/191408113?s=200&v=4)
 
@@ -15,7 +15,7 @@ Build in couple of hours & reduce cost/time for your current/next feature
 * Auto-discovery of nearby servers.
 * Real-time process status with live log viewer.
 * Processor can be written in any language **Currently .Net**.
-* Schedule events in multiple timezones.
+* Schedule events in multiple time zones.
 * Track CPU and memory usage for each process.
 * Historical stats with performance graphs.
 * Simple JSON messaging system for Processors.
@@ -41,7 +41,7 @@ Documentation coming soon on:
 ## 🚀: Get Started
 
 Check `/src/Templates/samples/` **SubscriptionServiceProcessor** example processor
-- ```dotnet add package Distenka --version 1.5.0-beta```
+- ```dotnet add package Distenka --version 1.0.0```
 
 - It includes processes for managing subscriptions and bank accounts, such as creating, modifying, activating, and deactivating subscriptions, as well as adding and validating bank accounts.
 
@@ -72,14 +72,14 @@ To see all registered Processes in the application, run:
 dotnet run -- list
 ```
 
-This will display a list of processes names, such as `SubscriptionServiceProcessor.CreateSubscriptionProcess`, etc.
+This will display a list of process names, such as `SubscriptionServiceProcessor.CreateSubscriptionProcess`, etc.
 
-To see how config file looks like, just generate json file for process. run
+To see what the config file looks like, simply generate a JSON file for the process. run
 
 ```
 dotnet run -- get "SubscriptionServiceProcessor.CreateSubscriptionProcess" CreateSubscriptionProcess.json
 ```
-here is the output file
+Here is the output file
 
 ```
 {
