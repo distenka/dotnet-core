@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NewDistenkaApp
 {
-	// Dive deep into the anatomy of a Process: https://www.distenka.ai/docs
+	// Dive deep into the anatomy of a Process: https://github.com/distenka/dotnet-core
 	public class NewProcess : Process<NewProcessConfig, string>
 	{
 		public NewProcess(NewProcessConfig config)

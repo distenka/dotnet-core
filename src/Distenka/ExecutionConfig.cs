@@ -1,38 +1,11 @@
-﻿using System;
-
-namespace Distenka
+﻿namespace Distenka
 {
 	/// <summary>
-	/// Determines how a Processor will execute and update status.
+	/// Determines how the Processor host executes a Processor.
 	/// </summary>
-	/// <remarks>The data in this class is used by the Distenka API, Processor host. This class should not be extended.</remarks>
+	/// <remarks>The data in this class is read only by the Processor host; nothing in it is sent to or read by the Distenka platform. This class should not be extended.</remarks>
 	public class ExecutionConfig
 	{
-		/// <summary>
-		/// your Org name.
-		/// </summary>
-		public string OrgName { get; set; }
-		
-		/// <summary>
-		/// The API key on distenka platform.
-		/// </summary>
-		public string APIKey { get; set; }
-
-		/// <summary>
-		/// The Environment name.
-		/// </summary>
-		public string Env { get; set; }
-		
-		/// <summary>
-		/// The Processor Name.
-		/// </summary>
-		public string Processor { get; set; }
-		
-		/// <summary>
-		/// The current Run Id item.
-		/// </summary>
-		public string RunId { get; set; }
-		
 		/// <summary>
 		/// The number of tasks created to call in parallel the ProcessAsync method of the Processor.
 		/// </summary>
@@ -85,27 +58,10 @@ namespace Distenka
 		public bool LaunchDebugger { get; set; }
 
 		/// <summary>
-		/// The amount of time, in seconds, to wait before allowing the Processor to execute after being queued.
-		/// </summary>
-		/// <remarks>This setting is used by the Distenka API to delay the assignment of the run to a node. It has no effect when running locally.</remarks>
-		public int Delay { get; set; }
-
-		/// <summary>
-		/// Blocks the execution of the Processor until the Processor identified by the Run ID has completed.
-		/// </summary>
-		/// <remarks>This setting is used by the Distenka API to block the assignment of the run to a node until the other run has completed. It has no effect when running locally.</remarks>
-		public Guid? RunAfterId { get; set; }
-
-		/// <summary>
 		/// Initializes a new instance of <see cref="ExecutionConfig"/>
 		/// </summary>
 		public ExecutionConfig()
 		{
-			OrgName = string.Empty;
-			APIKey = string.Empty;
-			Env = string.Empty;
-			Processor = string.Empty;
-			RunId = string.Empty;
 			ParallelTaskCount = 1;
 			ItemFailureRetryCount = 0;
 			ItemFailureCountToStopProcess = 1;

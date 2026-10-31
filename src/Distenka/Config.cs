@@ -27,19 +27,12 @@ namespace Distenka
 		public ExecutionConfig Execution { get; set; }
 
 		/// <summary>
-		/// Distenka API connection information used to report progress and store results of the Processor.
-		/// </summary>
-		[JsonSchemaIgnore]
-		public DistenkaApiConfig DistenkaApi { get; set; }
-
-		/// <summary>
 		/// Initializes a new <see cref="Config"/>.
 		/// </summary>
 		public Config()
 		{
 			Process = new ProcessorConfig();
 			Execution = new ExecutionConfig();
-			DistenkaApi = new DistenkaApiConfig();
 		}
 	}
 }

@@ -11,7 +11,7 @@
     <Description>Templates for creating Distenka Processes for .NET Core</Description>
     <PackageTags>Distenka;ai;vibe-coding;serverless;awesome;Processor;batch</PackageTags>
     <Copyright>Copyright © Distenka</Copyright>
-    <PackageProjectUrl>https://www.distenka.ai/</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/distenka/dotnet-core</PackageProjectUrl>
     <TargetFramework>net8.0</TargetFramework>
     <IncludeContentInPack>true</IncludeContentInPack>
     <IncludeBuildOutput>false</IncludeBuildOutput>

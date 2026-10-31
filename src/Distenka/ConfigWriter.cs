@@ -36,7 +36,7 @@ namespace Distenka
 		public static string ToJson(Config config) => JsonConvert.SerializeObject(config, Settings) + Environment.NewLine;
 
 		/// <summary>
-		/// Serializes a <see cref="Config"/> to JSON, removing the <see cref="Config.Execution"/> and <see cref="Config.DistenkaApi"/> sections for brevity.
+		/// Serializes a <see cref="Config"/> to JSON, removing the <see cref="Config.Execution"/> section for brevity.
 		/// </summary>
 		public static string ToReducedJson(Config config) => JsonConvert.SerializeObject(ToReducedProcessject(config), Settings) + Environment.NewLine;
 
@@ -47,7 +47,6 @@ namespace Distenka
 
 			var Process = JObject.FromObject(config, Serializer);
 
-			Process.Remove(nameof(Config.DistenkaApi).ToCamelCase());
 			Process.Remove(nameof(Config.Execution).ToCamelCase());
 
 			return Process;
