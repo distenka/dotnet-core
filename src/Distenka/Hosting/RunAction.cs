@@ -134,9 +134,11 @@ namespace Distenka.Hosting
 			if (!_config.Execution.ResultsToConsole)
 				return NullRunReporter.Instance;
 
-			return RunOutputOptions.IsPlain(_forcePlain, Console.IsOutputRedirected)
-				? new PlainLineReporter(Console.Out)
-				: new InteractiveSpectreReporter();
+			if (!RunOutputOptions.IsPlain(_forcePlain, Console.IsOutputRedirected))
+				return new InteractiveSpectreReporter();
+
+			RunOutputOptions.UseUtf8Output();
+			return new PlainLineReporter(Console.Out);
 		}
 
 		private void AttachDebugger()

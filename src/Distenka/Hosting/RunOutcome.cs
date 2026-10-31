@@ -111,7 +111,13 @@ namespace Distenka.Hosting
 		/// <c>\r</c>/<c>\n</c>, every other C0 control character becomes <c>\uXXXX</c>, and the result is capped at
 		/// <see cref="MaxLineLength"/> characters (ADR-009 §2.2).
 		/// </summary>
-		public static string ToSingleLine(string text)
+		public static string ToSingleLine(string text) => Cap(Escape(text));
+
+		/// <summary>
+		/// Writes <c>\r</c>/<c>\n</c> as the two characters <c>\r</c>/<c>\n</c> and every other C0 control character
+		/// (and DEL) as <c>\uXXXX</c> (ADR-009 §2.2). Does not cap the length.
+		/// </summary>
+		public static string Escape(string text)
 		{
 			if (string.IsNullOrEmpty(text))
 				return string.Empty;
@@ -133,8 +139,22 @@ namespace Distenka.Hosting
 				}
 			}
 
-			if (sb.Length <= MaxLineLength)
-				return sb.ToString();
+			return sb.ToString();
+		}
+
+		/// <summary>
+		/// Caps an already escaped line at <see cref="MaxLineLength"/> characters, suffixed with <c>… (+n chars)</c>
+		/// stating how many characters were cut (ADR-009 §2.2).
+		/// </summary>
+		public static string Cap(string line)
+		{
+			if (string.IsNullOrEmpty(line))
+				return string.Empty;
+
+			if (line.Length <= MaxLineLength)
+				return line;
+
+			var sb = line;
 
 			// The suffix states how many characters were cut; its own length depends on that number, so settle it first.
 			var removed = sb.Length - MaxLineLength;
@@ -159,7 +179,7 @@ namespace Distenka.Hosting
 				suffix = $"… (+{sb.Length - keep} chars)";
 			}
 
-			return sb.ToString(0, keep) + suffix;
+			return sb.Substring(0, keep) + suffix;
 		}
 	}
 }

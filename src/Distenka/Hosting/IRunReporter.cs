@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Distenka.Hosting
@@ -54,6 +56,23 @@ namespace Distenka.Hosting
 		/// Decided once at start-up; there is no environment-variable switch (the sandbox has no environment).
 		/// </summary>
 		public static bool IsPlain(bool forcePlain, bool isOutputRedirected) => forcePlain || isOutputRedirected;
+
+		/// <summary>
+		/// Plain mode writes UTF-8 (no BOM). The executor reads the plugin's stdout as UTF-8 (the .NET default on Linux);
+		/// on Windows a redirected stdout would otherwise use the OEM code page and mangle non-ASCII text such as the
+		/// <c>…</c> of a capped line or a non-ASCII item id. Does nothing when stdout already is UTF-8 or when the
+		/// encoding cannot be changed; a writer installed with <see cref="Console.SetOut"/> is kept as is.
+		/// </summary>
+		public static void UseUtf8Output()
+		{
+			try
+			{
+				if (Console.OutputEncoding.CodePage != Encoding.UTF8.CodePage)
+					Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+			}
+			catch (IOException) { }
+			catch (PlatformNotSupportedException) { }
+		}
 	}
 
 	/// <summary>Rules for user-supplied text that reporters echo (ADR-004 §2.3 rule 2).</summary>

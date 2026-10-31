@@ -19,6 +19,9 @@ namespace Distenka.Processing
 	{
 		readonly IItemSource<TItem> source;
 		readonly IServiceProvider provider;
+		// Exceptions caught by the pipeline are logged at Debug, not Error: they are already reported through the outcome
+		// (one ERROR: line from RunAction on a failed run, item ids on a tolerated failure). At Error they would become
+		// extra ERROR: lines on stdout and fail Successful runs on the platform (ADR-004 §2.3 rules 2-3, ADR-009, DCS-042).
 		readonly ILogger<ExecutionBase<TConfig, TItem>> logger;
 		readonly SemaphoreSlim moveNextLock = new SemaphoreSlim(1, 1);
 		IAsyncEnumerator<TItem> enumerator;
@@ -65,7 +68,7 @@ namespace Distenka.Processing
 				catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 				{
 					exception = ex;
-					logger.LogError(ex, $"{nameof(Processor.InitializeAsync)} threw an excpetion: " + ex.ToString());
+					logger.LogDebug(ex, $"{nameof(Processor.InitializeAsync)} threw an excpetion: " + ex.ToString());
 				}
 
 				stopwatch.Stop();
@@ -95,7 +98,7 @@ namespace Distenka.Processing
 				catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 				{
 					exception = ex;
-					logger.LogError(ex, $"Unhandled exception in {nameof(source.GetItemsAsync)}");
+					logger.LogDebug(ex, $"Unhandled exception in {nameof(source.GetItemsAsync)}");
 				}
 
 				stopwatch.Stop();
@@ -128,7 +131,7 @@ namespace Distenka.Processing
 				catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 				{
 					exception = ex;
-					logger.LogError(ex, $"Unhandled exception in {nameof(items.GetAsyncEnumerator)}");
+					logger.LogDebug(ex, $"Unhandled exception in {nameof(items.GetAsyncEnumerator)}");
 				}
 
 				stopwatch.Stop();
@@ -158,7 +161,7 @@ namespace Distenka.Processing
 					catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 					{
 						exception = ex;
-						logger.LogError(ex, $"Unhandled exception in items.Count");
+						logger.LogDebug(ex, $"Unhandled exception in items.Count");
 					}
 				}
 
@@ -213,7 +216,7 @@ namespace Distenka.Processing
 				catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 				{
 					exception = ex;
-					logger.LogError(ex, $"Unhandled excpetion in {nameof(Processor.FinalizeAsync)}");
+					logger.LogDebug(ex, $"Unhandled excpetion in {nameof(Processor.FinalizeAsync)}");
 				}
 
 				stopwatch.Stop();
@@ -262,7 +265,7 @@ namespace Distenka.Processing
 					}
 					catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 					{
-						logger.LogError(ex, $"Unhandled exception in {nameof(ExecutionBase<TConfig, TItem>.ProcessescopeAsync)}");
+						logger.LogDebug(ex, $"Unhandled exception in {nameof(ExecutionBase<TConfig, TItem>.ProcessescopeAsync)}");
 					}
 				}));
 			}
@@ -311,12 +314,12 @@ namespace Distenka.Processing
 					catch (OperationCanceledException ex) when (Processor.CancellationToken.IsCancellationRequested)
 					{
 						@continue = false;
-						logger.LogError(ex, $"Unhandled {nameof(OperationCanceledException)} in {nameof(enumerator.MoveNextAsync)}");
+						logger.LogDebug(ex, $"Unhandled {nameof(OperationCanceledException)} in {nameof(enumerator.MoveNextAsync)}");
 					}
 					catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 					{
 						exception = ex;
-						logger.LogError(ex, $"Unhandled exception in {nameof(enumerator.MoveNextAsync)}");
+						logger.LogDebug(ex, $"Unhandled exception in {nameof(enumerator.MoveNextAsync)}");
 					}
 
 					stopwatch.Stop();
@@ -350,7 +353,7 @@ namespace Distenka.Processing
 					catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 					{
 						exception = ex;
-						logger.LogError(ex, $"Unhandled exception in {nameof(enumerator.Current)}");
+						logger.LogDebug(ex, $"Unhandled exception in {nameof(enumerator.Current)}");
 					}
 
 					stopwatch.Stop();
@@ -380,7 +383,7 @@ namespace Distenka.Processing
 				}
 				catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 				{
-					logger.LogError(ex, $"Unhandled exception in {nameof(source.GetItemIdAsync)}");
+					logger.LogDebug(ex, $"Unhandled exception in {nameof(source.GetItemIdAsync)}");
 					exception = ex;
 				}
 
@@ -411,7 +414,7 @@ namespace Distenka.Processing
 					catch (Exception ex) when (Processor.Config.Execution.HandleExceptions)
 					{
 						exception = ex;
-						logger.LogError(ex, $"Unhandled exception in {nameof(CallProcess)}");
+						logger.LogDebug(ex, $"Unhandled exception in {nameof(CallProcess)}");
 					}
 
 					if (processItem != null && processItem.IsSuccessful)

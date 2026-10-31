@@ -65,45 +65,53 @@ namespace Distenka.Tests
 	static class ProcessorProcess
 	{
 		/// <summary>The built <c>Distenka.Diagnostics.dll</c> for the configuration these tests were built with.</summary>
-		public static string DiagnosticsDll
+		public static string DiagnosticsDll => BuiltDll(Path.Combine("src", "Diagnostics"), "Distenka.Diagnostics.dll");
+
+		/// <summary>The built <c>Distenka.Tests.Cli.dll</c> (holds <c>LoggingProcessor</c>, DCS-042).</summary>
+		public static string TestsCliDll => BuiltDll(Path.Combine("test", "Distenka.Tests.Cli"), "Distenka.Tests.Cli.dll");
+
+		static string BuiltDll(string projectDir, string dllName)
 		{
-			get
+			var baseDir = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+			var tfm = baseDir.Name;                 // net8.0
+			var configuration = baseDir.Parent.Name; // Debug / Release
+
+			var root = baseDir;
+			while (root != null && !File.Exists(Path.Combine(root.FullName, "Distenka.sln")))
+				root = root.Parent;
+
+			if (root != null)
 			{
-				var baseDir = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-				var tfm = baseDir.Name;                 // net8.0
-				var configuration = baseDir.Parent.Name; // Debug / Release
-
-				var root = baseDir;
-				while (root != null && !File.Exists(Path.Combine(root.FullName, "Distenka.sln")))
-					root = root.Parent;
-
-				if (root != null)
-				{
-					var built = Path.Combine(root.FullName, "src", "Diagnostics", "bin", configuration, tfm, "Distenka.Diagnostics.dll");
-					if (File.Exists(built))
-						return built;
-				}
-
-				var copied = Path.Combine(baseDir.FullName, "Distenka.Diagnostics.dll");
-				if (File.Exists(copied) && File.Exists(Path.Combine(baseDir.FullName, "Distenka.Diagnostics.runtimeconfig.json")))
-					return copied;
-
-				throw new FileNotFoundException("Build src/Diagnostics before running the process-level tests (test.ps1 does).", "Distenka.Diagnostics.dll");
+				var built = Path.Combine(root.FullName, projectDir, "bin", configuration, tfm, dllName);
+				if (File.Exists(built))
+					return built;
 			}
+
+			var copied = Path.Combine(baseDir.FullName, dllName);
+			if (File.Exists(copied) && File.Exists(Path.ChangeExtension(copied, ".runtimeconfig.json")))
+				return copied;
+
+			throw new FileNotFoundException($"Build {projectDir} before running the process-level tests (test.ps1 does).", dllName);
 		}
 
 		/// <summary>Writes <paramref name="configJson"/> to a temp file and runs the Diagnostics processor with it.</summary>
-		public static Task<ProcessRun> RunDiagnosticsAsync(string configJson, Action<Process> whileRunning = null, int timeoutSeconds = 60, params string[] extraArgs)
+		public static Task<ProcessRun> RunDiagnosticsAsync(string configJson, Action<Process> whileRunning = null, int timeoutSeconds = 60, params string[] extraArgs) =>
+			RunConfigAsync(DiagnosticsDll, configJson, whileRunning: whileRunning, timeoutSeconds: timeoutSeconds, extraArgs: extraArgs);
+
+		/// <summary>Writes <paramref name="configJson"/> to a temp file and runs <c>dotnet &lt;dll&gt; run &lt;config&gt;</c>.</summary>
+		/// <param name="environment">Extra environment variables (on top of the near-empty executor-like environment).</param>
+		public static Task<ProcessRun> RunConfigAsync(string dll, string configJson, IDictionary<string, string> environment = null,
+			Action<Process> whileRunning = null, int timeoutSeconds = 60, string[] extraArgs = null)
 		{
 			var dir = Path.Combine(Path.GetTempPath(), "distenka-tests", Guid.NewGuid().ToString("N"));
 			Directory.CreateDirectory(dir);
 			var configPath = Path.Combine(dir, "config.json");
 			File.WriteAllText(configPath, configJson);
 
-			return RunAsync(DiagnosticsDll, new[] { "run", configPath }.Concat(extraArgs ?? Array.Empty<string>()).ToArray(), whileRunning, timeoutSeconds);
+			return RunAsync(dll, new[] { "run", configPath }.Concat(extraArgs ?? Array.Empty<string>()).ToArray(), whileRunning, timeoutSeconds, environment);
 		}
 
-		public static async Task<ProcessRun> RunAsync(string dll, string[] args, Action<Process> whileRunning, int timeoutSeconds)
+		public static async Task<ProcessRun> RunAsync(string dll, string[] args, Action<Process> whileRunning, int timeoutSeconds, IDictionary<string, string> environment = null)
 		{
 			var psi = new ProcessStartInfo(DotnetHost())
 			{
@@ -113,6 +121,9 @@ namespace Distenka.Tests
 				UseShellExecute = false,
 				CreateNoWindow = true,
 				WorkingDirectory = Path.GetDirectoryName(dll),
+				// The executor (Linux .NET) reads the plugin's streams as UTF-8.
+				StandardOutputEncoding = new System.Text.UTF8Encoding(false),
+				StandardErrorEncoding = new System.Text.UTF8Encoding(false),
 			};
 
 			psi.ArgumentList.Add(dll);
@@ -128,6 +139,9 @@ namespace Distenka.Tests
 			foreach (var (k, v) in saved)
 				psi.Environment[k] = v;
 			psi.Environment["DOTNET_NOLOGO"] = "1";
+			if (environment != null)
+				foreach (var pair in environment)
+					psi.Environment[pair.Key] = pair.Value;
 
 			var stdout = new List<string>();
 			var stderr = new List<string>();

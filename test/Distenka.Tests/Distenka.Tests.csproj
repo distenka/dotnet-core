@@ -27,6 +27,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Diagnostics\Diagnostics.csproj" />
     <ProjectReference Include="..\..\src\Distenka\Distenka.csproj" />
+    <!-- Built first so the DCS-042 process-level tests can spawn it; not referenced as an assembly. -->
+    <ProjectReference Include="..\Distenka.Tests.Cli\Distenka.Tests.Cli.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

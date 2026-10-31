@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.EventLog;
+using Distenka.Hosting;
 
 namespace Distenka
 {
@@ -29,7 +31,7 @@ namespace Distenka
 		///     <item><description>load app <see cref="IConfiguration"/> from User Secrets when <see cref="IHostEnvironment.EnvironmentName"/> is 'Development' using the entry assembly</description></item>
 		///     <item><description>load app <see cref="IConfiguration"/> from environment variables</description></item>
 		///     <item><description>load app <see cref="IConfiguration"/> from supplied command line args</description></item>
-		///     <item><description>configure the <see cref="ILoggerFactory"/> to log to the console, debug, and event source output</description></item>
+		///     <item><description>configure the <see cref="ILoggerFactory"/> to write one executor-compatible line per event to stdout for <c>run</c> and processor commands (ADR-009; not for <c>list</c>/<c>get</c>), plus debug and event log output when stdout is a terminal, and event source output always</description></item>
 		///     <item><description>enables scope validation on the dependency injection container when <see cref="IHostEnvironment.EnvironmentName"/> is 'Development'</description></item>
 		///   </list>
 		/// </remarks>
@@ -53,7 +55,7 @@ namespace Distenka
 		///     <item><description>load app <see cref="IConfiguration"/> from User Secrets when <see cref="IHostEnvironment.EnvironmentName"/> is 'Development' using the entry assembly</description></item>
 		///     <item><description>load app <see cref="IConfiguration"/> from environment variables</description></item>
 		///     <item><description>load app <see cref="IConfiguration"/> from supplied command line args</description></item>
-		///     <item><description>configure the <see cref="ILoggerFactory"/> to log to the console, debug, and event source output</description></item>
+		///     <item><description>configure the <see cref="ILoggerFactory"/> to write one executor-compatible line per event to stdout for <c>run</c> and processor commands (ADR-009; not for <c>list</c>/<c>get</c>), plus debug and event log output when stdout is a terminal, and event source output always</description></item>
 		///     <item><description>enables scope validation on the dependency injection container when <see cref="IHostEnvironment.EnvironmentName"/> is 'Development'</description></item>
 		///   </list>
 		/// </remarks>
@@ -62,10 +64,28 @@ namespace Distenka
 		/// <returns>The initialized <see cref="IHostBuilder"/>.</returns>
 		public static IHostBuilder CreateDefaultBuilder(string[] args, params Assembly[] ProcessAssemblies)
 		{
+			args ??= Array.Empty<string>();
+
+			// ADR-009 §2.1/§2.3: commands that run processor code (`run` and the per-processor commands) write ILogger events
+			// to stdout as executor-compatible lines. `list` and `get` must keep stdout for their own document (ADR-003 §2.1).
+			var command = args.Length > 0 ? args[0] : null;
+			var writesLogsToStdout = command != "list" && command != "get";
+			var plain = RunOutputOptions.IsPlain(args.Contains("--plain") || args.Contains("-p"), Console.IsOutputRedirected);
+
+			if (writesLogsToStdout && plain)
+				RunOutputOptions.UseUtf8Output();
+
 			return Host
 				.CreateDefaultBuilder()
 				.ConfigureServices((hostingContext, services) =>
 				{
+					if (writesLogsToStdout)
+					{
+						// The host's "Application started. Press Ctrl+C to shut down." / environment / content-root lines are noise
+						// in a run (ADR-009 §2.5).
+						services.Configure<ConsoleLifetimeOptions>(options => options.SuppressStatusMessages = true);
+					}
+
 					services.AddLogging(logging =>
 					{
 						// We need to remove the console logger that Host.CreateDefaultBuilder()
@@ -89,12 +109,35 @@ namespace Distenka
 							logging.AddFilter<EventLogLoggerProvider>(level => level >= LogLevel.Warning);
 						}
 
+						if (writesLogsToStdout)
+						{
+							// ADR-009 §2.5 defaults; the package's appsettings.json `Logging` section, loaded next, overrides them.
+							logging.SetMinimumLevel(LogLevel.Information);
+							logging.AddFilter("Microsoft", LogLevel.Warning);
+							logging.AddFilter("System", LogLevel.Warning);
+							logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.None);
+						}
+
 						logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
 
-						logging.AddDebug();
+						if (writesLogsToStdout)
+						{
+							logging.AddProvider(new StdoutLineLoggerProvider(new StdoutLineLoggerOptions
+							{
+								Plain = plain,
+								NeutraliseHeuristicTriggers = hostingContext.Configuration.GetValue<bool?>(StdoutLineLoggerOptions.NeutraliseHeuristicTriggersKey) ?? true
+							}));
+						}
+
+						// Plain mode (the sandbox): stdout lines + EventSource only (ADR-009 §2.3).
+						var sandboxed = writesLogsToStdout && plain;
+
+						if (!sandboxed)
+							logging.AddDebug();
+
 						logging.AddEventSourceLogger();
 
-						if (isWindows)
+						if (isWindows && !sandboxed)
 						{
 							// Add the EventLogLoggerProvider on windows machines
 							logging.AddEventLog();
