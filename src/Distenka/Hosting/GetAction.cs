@@ -58,7 +58,7 @@ namespace Distenka.Hosting
 						writer = new StreamWriter(File.Open(_filePath, FileMode.Create));
 					}
 
-					await writer.WriteAsync(_verbose ? ConfigWriter.ToJson(config) : ConfigWriter.ToReducedJson(config));
+					await writer.WriteAsync(_verbose ? ConfigWriter.ToJson(config) : ConfigWriter.ToExampleJson(config));
 				}
 				finally
 				{

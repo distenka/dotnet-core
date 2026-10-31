@@ -24,6 +24,12 @@ namespace Distenka.Hosting
 			Processes = FindProcessTypes(ProcessAssemblies);
 		}
 
+		/// <summary>Builds a cache from explicit processor types (tests; DCS-043).</summary>
+		internal ProcessCache(IEnumerable<Type> processTypes)
+		{
+			Processes = processTypes.Select(t => new ProcessInfo(t)).ToList();
+		}
+
 		IEnumerable<ProcessInfo> FindProcessTypes(IEnumerable<Assembly> ProcessAssemblies)
 		{
 			var result = new List<ProcessInfo>();

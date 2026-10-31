@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
+using System.Linq;
 
 namespace Distenka
 {
@@ -39,6 +40,21 @@ namespace Distenka
 		/// Serializes a <see cref="Config"/> to JSON, removing the <see cref="Config.Execution"/> section for brevity.
 		/// </summary>
 		public static string ToReducedJson(Config config) => JsonConvert.SerializeObject(ToReducedProcessject(config), Settings) + Environment.NewLine;
+
+		/// <summary>
+		/// Serializes a <see cref="Config"/> as a runnable example: the reduced form (no <see cref="Config.Execution"/>, the
+		/// process as its canonical name) without root members whose default value is <c>null</c> — the published input
+		/// schema declares them non-nullable, so a <c>null</c> would be refused by the platform (ADR-003; DCS-043).
+		/// </summary>
+		public static string ToExampleJson(Config config)
+		{
+			var json = ToReducedProcessject(config);
+
+			foreach (var property in json.Properties().Where(p => p.Value.Type == JTokenType.Null).ToList())
+				property.Remove();
+
+			return JsonConvert.SerializeObject(json, Settings) + Environment.NewLine;
+		}
 
 		internal static JObject ToReducedProcessject(Config config)
 		{

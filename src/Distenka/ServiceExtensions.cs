@@ -125,12 +125,13 @@ namespace Distenka
 		{
 			var root = new RootCommand();
 
-			var list = new Command(ListCommand, "Lists the Processes available to run.")
+			var list = new Command(ListCommand, "Prints the package's input schema (one JSON descriptor object) for the Distenka platform.")
 			{
-				new Option<bool>(new[] { "--verbose", "-v" }, "Optional. Changes the config serialization to include all properties."),
-				new Option<bool>(new[] { "--json", "-j" }, "Optional. Changes the output format to JSON.")
+				new Option<bool>(new[] { "--verbose", "-v" }, "Optional. Prints a human-readable listing of the processes and their input schema instead."),
+				new Option<bool>("--legacy-json", "Optional. Prints the 1.x JSON listing of processes and default configs (kept for one major version)."),
+				new Option<bool>(new[] { "--json", "-j" }, "Withdrawn. Use list, list --verbose or list --legacy-json.")
 			};
-			list.Handler = CommandHandler.Create<bool, bool>((verbose, json) => services.AddListAction(verbose, json));
+			list.Handler = CommandHandler.Create<bool, bool, bool>((verbose, legacyJson, json) => services.AddListAction(verbose, legacyJson, json));
 			root.AddCommand(list);
 
 			var get = new Command(GetCommand, "Writes the default config for the specified type to the file path.")
@@ -249,17 +250,15 @@ namespace Distenka
 			}
 		}
 
-		static void AddListAction(this IServiceCollection services, bool verbose, bool json)
+		static void AddListAction(this IServiceCollection services, bool verbose, bool legacyJson, bool json)
 		{
-			services.AddTransient<JsonSchema>();
-
 			services.AddTransient<IHostedService>(s => new ListAction(
 				verbose,
+				legacyJson,
 				json,
 				s.GetRequiredService<ProcessCache>(),
-				s.GetRequiredService<JsonSchema>(),
-                s.GetRequiredService<IHostApplicationLifetime>()
-            ));
+				s.GetRequiredService<IHostApplicationLifetime>()
+			));
 		}
 
 		static void AddGetAction(this IServiceCollection services, string type, string filePath, bool verbose)

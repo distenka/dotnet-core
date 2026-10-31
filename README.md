@@ -66,15 +66,35 @@ json
 ### Running Processes
 The project uses the Distenka framework to manage and execute processes. Below are the key CLI commands for interacting with the processes.
 
-To see all registered Processes in the application, run:
+To see the input schema the Distenka platform reads from your package, run:
 
 ```
 dotnet run -- list
 ```
 
-This will display a list of process names, such as `SubscriptionServiceProcessor.CreateSubscriptionProcess`, etc.
+`list` prints exactly one JSON object: one descriptor per configuration property, plus a `process` property naming the processes in the package. Use `dotnet run -- list --verbose` for a readable listing of processes and their schema (`list --legacy-json` prints the 1.x listing for one more major version; `list --json` was withdrawn).
 
-To see what the config file looks like, simply generate a JSON file for the process. run
+### Describing your configuration
+
+The schema is generated from your `Config` subclass (public, settable properties; names in camelCase or as set by `[JsonProperty("name")]`; members of the base `Config` such as `execution` are never published):
+
+| C# | Descriptor |
+|---|---|
+| `string`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `Uri`, `byte[]` | `string` |
+| `char` / `Guid` | `string` with length 1 / 32–38 |
+| `bool` | `boolean` |
+| `byte` … `int`, `uint` / `long` / `ulong` | `integer` with the type's range / no range / `minimum: 0` |
+| `float`, `decimal` / `double` | `number` with the type's range / no range |
+| `enum` (not `[Flags]`) | `string` with `enum` of the member names (`[EnumMember(Value)]` honoured) |
+| `T[]`, `List<T>`, `IEnumerable<T>`, … | `array` with `items` |
+| a class with properties | `object` with `properties` |
+| `T?` / nullable reference (`string?` with nullable annotations on) | adds `nullable: true` |
+
+Attributes: `[Required]` → `required` (and `minLength: 1` on strings unless `AllowEmptyStrings`), `[Range]` → `minimum`/`maximum`, `[StringLength]`, `[MinLength]`, `[MaxLength]`, `[Length]` → length or item counts, `[AllowedValues]` → `enum`, `[Description]` → `description`, `[JsonIgnore]` → omitted. Defaults are not published. `[RegularExpression]`, `[EmailAddress]` and other validators are checked by the host when the run starts, not by the platform.
+
+`list` fails (exit 1, the reason on stderr) instead of publishing an unusable schema when a member is a dictionary, `object`, `JObject`/`JsonElement`, an interface or abstract type, a `[Flags]` enum, a self-referencing type, a member with `[JsonConverter]`, a constraint attribute that does not fit its type, nesting deeper than 16 JSON levels, or when two processes declare the same property differently. Callers must send property names exactly as published (case-sensitive) and the process by its full name. Details: `docs/adr/ADR-003-list-descriptor-schema.md`.
+
+To get a runnable example configuration for a process, run
 
 ```
 dotnet run -- get "SubscriptionServiceProcessor.CreateSubscriptionProcess" CreateSubscriptionProcess.json
