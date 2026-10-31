@@ -93,14 +93,14 @@ namespace Distenka.Tests
 		}
 
 		/// <summary>Writes <paramref name="configJson"/> to a temp file and runs the Diagnostics processor with it.</summary>
-		public static Task<ProcessRun> RunDiagnosticsAsync(string configJson, Action<Process> whileRunning = null, int timeoutSeconds = 60)
+		public static Task<ProcessRun> RunDiagnosticsAsync(string configJson, Action<Process> whileRunning = null, int timeoutSeconds = 60, params string[] extraArgs)
 		{
 			var dir = Path.Combine(Path.GetTempPath(), "distenka-tests", Guid.NewGuid().ToString("N"));
 			Directory.CreateDirectory(dir);
 			var configPath = Path.Combine(dir, "config.json");
 			File.WriteAllText(configPath, configJson);
 
-			return RunAsync(DiagnosticsDll, new[] { "run", configPath }, whileRunning, timeoutSeconds);
+			return RunAsync(DiagnosticsDll, new[] { "run", configPath }.Concat(extraArgs ?? Array.Empty<string>()).ToArray(), whileRunning, timeoutSeconds);
 		}
 
 		public static async Task<ProcessRun> RunAsync(string dll, string[] args, Action<Process> whileRunning, int timeoutSeconds)

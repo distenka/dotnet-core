@@ -147,9 +147,10 @@ namespace Distenka
 				new Argument<FileInfo>(ConfigPathArgument, "The JSON serialized config for the Processor to run.").ExistingOnly(),
 				new Argument<FileInfo>("resultsPath", () => null, "Optional. The file path to write the results of the Processor to."),
 				new Option<bool>(new[] { "--debug", "-d" }, "Optional. Prompts the user to attach a debugger when the Processor starts."),
-				new Option<bool>(new[] { "--silent", "-s" }, "Optional. Silences console output.")
+				new Option<bool>(new[] { "--silent", "-s" }, "Optional. Silences console output."),
+				new Option<bool>(new[] { "--plain", "-p" }, "Optional. Writes plain level-prefixed lines instead of the interactive UI. Implied when stdout is redirected.")
 			};
-			run.Handler = CommandHandler.Create<FileInfo, FileInfo, bool, bool>((configPath, resultsPath, debug, silent) => services.AddRunAction(cache, reader, configPath, resultsPath, debug, silent));
+			run.Handler = CommandHandler.Create<FileInfo, FileInfo, bool, bool, bool>((configPath, resultsPath, debug, silent, plain) => services.AddRunAction(cache, reader, configPath, resultsPath, debug, silent, plain));
 			root.AddCommand(run);
 
 			// Add a command for each Processor, with each config path as an option
@@ -280,10 +281,14 @@ namespace Distenka
 		/// <param name="configPath">The location of the JSON config to run.</param>
 		/// <param name="debug">Indicates whether to attach a debugger.</param>
 		/// <param name="silent">Indicates whether to output results to the console.</param>
-		static void AddRunAction(this IServiceCollection services, ProcessCache cache, ConfigReader reader, FileInfo configPath, FileInfo resultsPath,bool debug, bool silent)
+		/// <param name="plain">Forces plain level-prefixed output (ADR-009 §2.1); implied when stdout is redirected.</param>
+		static void AddRunAction(this IServiceCollection services, ProcessCache cache, ConfigReader reader, FileInfo configPath, FileInfo resultsPath, bool debug, bool silent, bool plain)
 		{
 			if (debug)
 				services.AddSingleton(new Debug() { AttachDebugger = true });
+
+			if (plain)
+				services.AddSingleton(new RunOutputOptions { ForcePlain = true });
 
 			var config = reader.FromFile(configPath.FullName);
 			config.__filePath = configPath.FullName;
@@ -346,7 +351,8 @@ namespace Distenka
                 s.GetRequiredService<IHostApplicationLifetime>(),
                 s,
 				s.GetRequiredService<ILogger<RunAction>>(),
-				s.GetService<Debug>()
+				s.GetService<Debug>(),
+				s.GetService<RunOutputOptions>()
 			));
 		}
 

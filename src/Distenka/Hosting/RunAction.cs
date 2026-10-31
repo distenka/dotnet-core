@@ -6,8 +6,6 @@ using Spectre.Console.Rendering;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,16 +18,18 @@ namespace Distenka.Hosting
 		private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly ILogger<RunAction> _logger;
 		private readonly bool _debug;
+		private readonly bool _forcePlain;
 
 		internal Config Config => _config;
 
-		public RunAction(Config config, IHostApplicationLifetime applicationLifetime, IServiceProvider serviceProvider, ILogger<RunAction> logger, Debug debug)
+		public RunAction(Config config, IHostApplicationLifetime applicationLifetime, IServiceProvider serviceProvider, ILogger<RunAction> logger, Debug debug, RunOutputOptions output = null)
 		{
 			_serviceProvider = serviceProvider;
 			_applicationLifetime = applicationLifetime;
 			this._config = config;
 			this._logger = logger;
 			this._debug = debug?.AttachDebugger ?? config?.Execution?.LaunchDebugger ?? false;
+			this._forcePlain = output?.ForcePlain ?? false;
 		}
 
 		protected override async Task RunAsync(CancellationToken token)
@@ -88,20 +88,16 @@ namespace Distenka.Hosting
 		}
 
 		/// <summary>
-		/// Runs the execution and renders it. Returns the <c>ERROR:</c> line describing why the run did not succeed,
-		/// or <c>null</c> when it ended <see cref="Disposition.Successful"/>.
+		/// Runs the execution and reports it through the reporter for the current output mode (ADR-009 §2.1, DCS-041).
+		/// Returns the <c>ERROR:</c> line describing why the run did not succeed, or <c>null</c> when it ended
+		/// <see cref="Disposition.Successful"/>.
 		/// </summary>
 		private async Task<string> ExecuteAndReportAsync(IServiceProvider services, CancellationToken token)
 		{
 			var execution = services.GetRequiredService<Execution>();
+			var reporter = CreateReporter();
 
-			Console.OutputEncoding = Encoding.UTF8;
-			Console.InputEncoding = Encoding.UTF8;
-
-			AnsiConsole.MarkupLine($"Running [blue]{Markup.Escape(_config.Process.Type ?? string.Empty)}[/]");
-			AnsiConsole.WriteLine();
-			AnsiConsole.MarkupLine($"[dim]Press Ctrl+C to cancel[/]");
-			AnsiConsole.WriteLine();
+			reporter.Starting(_config.Process.Type);
 
 			if (_debug)
 				AttachDebugger();
@@ -114,140 +110,12 @@ namespace Distenka.Hosting
 
 			var executing = execution.ExecuteAsync(ProcessCancellation.Token);
 
-			if (_config.Execution.ResultsToConsole)
-			{
-				await AnsiConsole.Status()
-					.Spinner(Spinner.Known.Dots)
-					.SpinnerStyle(Style.Parse("yellow bold"))
-					.StartAsync("Running", async ctx =>
-					{
-						AnsiConsole.Markup("Initializing...");
-
-						while (execution.State == ExecutionState.NotStarted ||
-							execution.State == ExecutionState.Initializing)
-							await Task.Delay(10);
-
-						if (execution.InitializeAsync.IsSuccessful)
-						{
-							AnsiConsole.MarkupLine("[green]Success[/]");
-
-							AnsiConsole.Markup("Getting items...");
-
-							while (execution.State == ExecutionState.GettingItemsToProcess)
-								await Task.Delay(10);
-
-							if (execution.GetItemsAsync.IsSuccessful && execution.GetEnumerator.IsSuccessful && execution.Count.IsSuccessful)
-							{
-								AnsiConsole.MarkupLine("[green]Success[/]");
-							}
-							else
-							{
-								AnsiConsole.MarkupLine("[red]Failed[/]");
-								AnsiConsole.WriteLine();
-								AnsiConsole.WriteException(execution.GetItemsAsync.Exception ?? execution.GetEnumerator.Exception ?? execution.Count.Exception);
-								AnsiConsole.WriteLine();
-							}
-						}
-						else
-						{
-							AnsiConsole.MarkupLine("[red]Failed[/]");
-							AnsiConsole.WriteLine();
-							AnsiConsole.WriteException(execution.InitializeAsync.Exception);
-							AnsiConsole.WriteLine();
-						}
-
-					});
-
-				if (execution.Disposition != Disposition.Failed)
-				{
-					var isIndeterminate = !execution.TotalItemCount.HasValue;
-
-					var cols = isIndeterminate ?
-					new ProgressColumn[]
-					{
-						new TaskDescriptionColumn(),
-						new AverageTimeColumn(execution),
-						new AverageTimeLastMinColumn(execution),
-						new ElapsedTimeColumn() { Style = Style.Parse("dim") },
-						new SpinnerColumn(Spinner.Known.Dots),
-					} :
-					new ProgressColumn[]
-					{
-						new TaskDescriptionColumn(),
-						new AverageTimeColumn(execution),
-						new AverageTimeLastMinColumn(execution),
-						new PercentageColumn(),
-						new ElapsedTimeColumn() { Style = Style.Parse("dim") },
-						new SpinnerColumn(Spinner.Known.Dots),
-					};
-
-					await AnsiConsole.Progress()
-						.Columns(cols)
-						.StartAsync(async ctx =>
-						{
-							var process = ctx.AddTask(isIndeterminate ? "Processing items:" : $"Processing {execution.TotalItemCount:N0} items:", maxValue: execution.TotalItemCount ?? double.MaxValue);
-
-							process.IsIndeterminate = isIndeterminate;
-
-							while (execution.State == ExecutionState.Processing)
-							{
-								process.Value = execution.CompletedItemCount;
-
-								await Task.Delay(100);
-							}
-
-							await Task.Delay(100);
-							ctx.Refresh();
-
-							process.Value = execution.CompletedItemCount;
-							process.StopTask();
-						});
-				}
-				else
-				{
-					AnsiConsole.WriteLine();
-				}
-
-				await AnsiConsole.Status()
-					.Spinner(Spinner.Known.Dots)
-					.SpinnerStyle(Style.Parse("yellow bold"))
-					.StartAsync("Running", async ctx =>
-					{
-						WriteItemResults(log);
-
-						AnsiConsole.Markup("Finalizing...");
-
-						while (execution.State == ExecutionState.Finalizing)
-							await Task.Delay(10);
-
-						if (execution.FinalizeAsync.IsSuccessful)
-						{
-							AnsiConsole.MarkupLine("[green]Success[/]");
-						}
-						else
-						{
-							AnsiConsole.MarkupLine("[red]Failed[/]");
-							AnsiConsole.WriteLine();
-							AnsiConsole.WriteException(execution.FinalizeAsync.Exception);
-							AnsiConsole.WriteLine();
-						}
-					});
-			}
+			await reporter.MonitorAsync(execution, log, executing);
 
 			// Execution.RunAsync will ensure all event handlers have completed before exiting
 			await executing;
 
-			if (_config.Execution.ResultsToConsole)
-			{
-				AnsiConsole.WriteLine();
-
-				if (execution.Disposition == Disposition.Successful)
-					AnsiConsole.MarkupLine($"[bold green]Processor SUCCESSFUL[/]");
-				else if (execution.Disposition == Disposition.Cancelled)
-					AnsiConsole.MarkupLine($"[bold darkorange]Processor CANCELLED[/]");
-				else
-					AnsiConsole.MarkupLine($"[bold red invert]Processor FAILED[/]");
-			}
+			reporter.Completed(execution);
 
 			if (_config.Execution.ResultsToFile)
 			{
@@ -261,68 +129,14 @@ namespace Distenka.Hosting
 			return RunOutcome.DescribeFailure(execution, token.IsCancellationRequested);
 		}
 
-		/// <summary>
-		/// Writes the item categories and failed item ids. ADR-004 §2.2 row 2 / §2.3 rule 2: tolerated item failures must not
-		/// fail a Successful run on the platform, so no exception type, message or stack is written here, and user text that
-		/// would trip the executor's error heuristics (for example a category named after an exception type) is omitted.
-		/// </summary>
-		private static void WriteItemResults(ResultLog log)
+		private IRunReporter CreateReporter()
 		{
-			const int MaxFailedItemLines = 10;
+			if (!_config.Execution.ResultsToConsole)
+				return NullRunReporter.Instance;
 
-			var omitted = 0;
-
-			string Safe(string text)
-			{
-				if (RunOutcome.ContainsErrorTrigger(text))
-				{
-					omitted++;
-					return "(omitted)";
-				}
-
-				return RunOutcome.ToSingleLine(text);
-			}
-
-			var categories = log.Categories.ToList();
-
-			if (categories.Any())
-			{
-				AnsiConsole.MarkupLine("[dim]Item results:[/]");
-
-				var grid = new Grid();
-				grid.AddColumn();
-				grid.AddColumn();
-
-				foreach (var c in categories)
-				{
-					var name = Markup.Escape(Safe(c.Category ?? (c.IsSuccessful ? Result.Successful : Result.Failed)));
-
-					grid.AddRow(new Markup[]
-					{
-						new Markup($"{c.Count}"),
-						new Markup(c.IsSuccessful ? name : $"[red]{name}[/]")
-					});
-				}
-
-				AnsiConsole.Write(grid);
-				AnsiConsole.WriteLine();
-			}
-
-			var failed = log.FailedItems.ToList();
-
-			if (failed.Count > 0)
-			{
-				foreach (var failure in failed.Take(MaxFailedItemLines))
-					AnsiConsole.WriteLine($"WARN: item '{Safe(failure.Id ?? "unknown")}' failed");
-
-				if (failed.Count > MaxFailedItemLines)
-					AnsiConsole.WriteLine($"WARN: {failed.Count - MaxFailedItemLines} more failed item(s) not listed");
-
-				AnsiConsole.WriteLine();
-			}
-
-			if (omitted > 0)
-				AnsiConsole.WriteLine($"WARN: {omitted} item message(s) omitted from output");
+			return RunOutputOptions.IsPlain(_forcePlain, Console.IsOutputRedirected)
+				? new PlainLineReporter(Console.Out)
+				: new InteractiveSpectreReporter();
 		}
 
 		private void AttachDebugger()

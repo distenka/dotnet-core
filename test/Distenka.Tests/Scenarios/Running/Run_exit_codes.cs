@@ -46,7 +46,7 @@ namespace Distenka.Tests.Scenarios.Running
 			var run = await ProcessorProcess.RunDiagnosticsAsync($"{{ {ProcessKey}, \"numberOfItems\": 3, \"millisecondDelayPerItem\": 0 }}");
 
 			ShouldBeCleanSuccess(run);
-			run.Stdout.Should().Contain(l => l.Contains("Processor SUCCESSFUL"), run.ToString());
+			run.Stdout.Should().Contain("INFO: Disposition=Successful", run.ToString());
 		}
 
 		[Fact]
