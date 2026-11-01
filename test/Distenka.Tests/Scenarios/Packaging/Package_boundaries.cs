@@ -18,11 +18,12 @@ namespace Distenka.Tests.Scenarios.Packaging
 	/// </summary>
 	public class Package_boundaries : IClassFixture<Package_boundaries.Packages>
 	{
-		/// <summary>ADR-001 §2.1: prohibited for every SDK package, without exception (prefix match, case-insensitive).</summary>
+		/// <summary>ADR-001 §2.1 and ADR-007 §2.2: prohibited for every SDK package, without exception (prefix match, case-insensitive).</summary>
 		static readonly string[] ProhibitedEverywhere =
 		{
 			"Microsoft.Orleans.", "StackExchange.Redis", "Npgsql", "Microsoft.EntityFrameworkCore", "KubernetesClient",
-			"Azure.", "Microsoft.Azure.", "RabbitMQ.", "MassTransit", "Distenka.Core."
+			"Azure.", "Microsoft.Azure.", "RabbitMQ.", "MassTransit", "Distenka.Core.",
+			"Microsoft.AspNetCore.SignalR" // ADR-007 §2.2: no SignalR client in any SDK package
 		};
 
 		/// <summary>ADR-008 §2.1.1 / DCS-010 AC 3: never a dependency of Distenka.Client (exact id, case-insensitive).</summary>
