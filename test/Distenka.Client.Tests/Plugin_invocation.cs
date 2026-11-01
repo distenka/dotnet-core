@@ -182,6 +182,30 @@ namespace Distenka.Client.Tests
 			handler.Requests.Should().HaveCount(1);
 		}
 
+		[Theory]
+		[InlineData(400, DistenkaErrorCodes.CallbackNotHttps)]
+		[InlineData(400, DistenkaErrorCodes.CallbackUserInfo)]
+		[InlineData(400, DistenkaErrorCodes.CallbackTooLong)]
+		[InlineData(400, DistenkaErrorCodes.CallbackMalformed)]
+		[InlineData(400, DistenkaErrorCodes.CallbackUnresolvable)]
+		[InlineData(400, DistenkaErrorCodes.CallbackPrivateAddress)]
+		[InlineData(409, DistenkaErrorCodes.CallbacksUnavailable)]
+		public async Task a_refused_callback_is_terminal(int status, string code)
+		{
+			// AC 4 (re-homed from DCS-022): docs/api-callbacks.md §What is refused — a refused callback is a 400 (409 when the
+			// deployment cannot sign callbacks), never a quiet 202, and the answer will not change on a retry.
+			var (client, handler) = Create(new ScriptedHttpHandler(Reply(status, $@"{{""code"":""{code}"",""error"":""Refused.""}}")));
+
+			var invoke = () => client.Invocations.InvokeAsync("echo", Input,
+				new InvokeOptions { IdempotencyKey = "k", CallbackUrl = new Uri("https://hooks.example.com/distenka") });
+
+			var thrown = (await invoke.Should().ThrowAsync<DistenkaApiException>()).Which;
+			thrown.StatusCode.Should().Be((HttpStatusCode)status);
+			thrown.Code.Should().Be(code);
+			thrown.IsRetryable.Should().BeFalse();
+			handler.Requests.Should().HaveCount(1, "a refused callback is not retried, even with an idempotency key");
+		}
+
 		[Fact]
 		public async Task a_typed_input_is_serialized_with_the_callers_context()
 		{

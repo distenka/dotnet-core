@@ -35,9 +35,14 @@ namespace Microsoft.Extensions.DependencyInjection
 		/// <summary>
 		/// Registers <see cref="IDistenkaClient"/> over <see cref="IHttpClientFactory"/>, with options read from a
 		/// configuration section (keys <c>BaseAddress</c>, <c>Timeout</c>, <c>AllowInsecureHttp</c>, <c>UserAgent</c>,
-		/// <c>MaxRetries</c>, <c>MaxRetryDelay</c>),
+		/// <c>MaxRetries</c>, <c>MaxRetryDelay</c>, <c>ApiKey</c>),
 		/// e.g. <c>services.AddDistenkaClient(configuration.GetSection("Distenka"))</c>. Validated when the host starts.
 		/// </summary>
+		/// <remarks>
+		/// Supply <c>ApiKey</c> (an account key, <c>DK-…</c>) from a secret source — the environment variable
+		/// <c>Distenka__ApiKey</c>, user secrets in Development, or your vault's configuration provider — never from a committed
+		/// file or a literal. It becomes an <see cref="Distenka.Client.Authentication.AccountKeyCredential"/>.
+		/// </remarks>
 		/// <param name="services">The service collection.</param>
 		/// <param name="configuration">The configuration section holding the client settings.</param>
 		/// <returns>The builder of the underlying named <see cref="HttpClient"/>.</returns>
@@ -64,8 +69,11 @@ namespace Microsoft.Extensions.DependencyInjection
 				return new DistenkaClient(new HttpTransport(httpClient, options));
 			});
 
+			// The factory's logging handler writes request headers at Trace level; the bearer token must never be among them
+			// (DCS-027, AD-9). Redacted values are logged as "*".
 			return services.AddHttpClient(HttpClientName, (sp, httpClient) =>
-				httpClient.Timeout = sp.GetRequiredService<IOptions<DistenkaClientOptions>>().Value.Timeout);
+					httpClient.Timeout = sp.GetRequiredService<IOptions<DistenkaClientOptions>>().Value.Timeout)
+				.RedactLoggedHeaders(new[] { "Authorization" });
 		}
 	}
 }

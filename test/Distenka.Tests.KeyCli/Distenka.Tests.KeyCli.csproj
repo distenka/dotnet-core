@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- DCS-027: a processor package that itself calls the platform. It references Distenka.Client (as a developer's job
+       package would) and reads its account key from an owner-bound configuration property. Spawned by the
+       process-level tests in Distenka.Tests (Scenarios/Running/Owner_bound_account_key.cs); not packed. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Distenka.Processor\Distenka.Processor.csproj" />
+    <ProjectReference Include="..\..\src\Distenka.Client\Distenka.Client.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -16,7 +16,8 @@ namespace Distenka.Tests.Scenarios.Packaging
 	/// `dotnet pack` actually generates (not on the csproj text). Packs the already-built projects with <c>--no-build</c>,
 	/// so the solution must be built first in the same configuration (<c>./test.ps1</c> does).
 	/// </summary>
-	public class Package_boundaries : IClassFixture<Package_boundaries.Packages>
+	[Collection(nameof(PackedPackages))]
+	public class Package_boundaries
 	{
 		/// <summary>ADR-001 §2.1 and ADR-007 §2.2: prohibited for every SDK package, without exception (prefix match, case-insensitive).</summary>
 		static readonly string[] ProhibitedEverywhere =
@@ -158,6 +159,12 @@ namespace Distenka.Tests.Scenarios.Packaging
 			public Nuspec Client { get; }
 			public Nuspec Testing { get; }
 
+			/// <summary>The template/sample package (DCS-027: scanned for secrets).</summary>
+			public Nuspec Templates { get; }
+
+			/// <summary>Every package packed here.</summary>
+			public IReadOnlyList<Nuspec> All => new[] { Processor, Client, Testing, Templates };
+
 			public Packages()
 			{
 				var baseDir = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
@@ -173,6 +180,7 @@ namespace Distenka.Tests.Scenarios.Packaging
 				Processor = Pack(root.FullName, configuration, Path.Combine("src", "Distenka.Processor", "Distenka.Processor.csproj"), "Distenka");
 				Client = Pack(root.FullName, configuration, Path.Combine("src", "Distenka.Client", "Distenka.Client.csproj"), "Distenka.Client");
 				Testing = Pack(root.FullName, configuration, Path.Combine("src", "Distenka.Processor.Testing", "Distenka.Processor.Testing.csproj"), "Distenka.Processor.Testing");
+				Templates = Pack(root.FullName, configuration, Path.Combine("src", "Templates", "Templates.csproj"), "Distenka.Templates");
 			}
 
 			Nuspec Pack(string root, string configuration, string project, string packageId)
@@ -230,6 +238,8 @@ namespace Distenka.Tests.Scenarios.Packaging
 		{
 			public string Id { get; private set; }
 			public string Version { get; private set; }
+			/// <summary>The .nupkg file (deleted with the fixture).</summary>
+			public string NupkgPath { get; private set; }
 			public IReadOnlyList<string> Files { get; private set; }
 			public IReadOnlyDictionary<string, IReadOnlyList<(string Id, string Version)>> DependencyGroups { get; private set; }
 			public IReadOnlyList<string> FrameworkReferences { get; private set; }
@@ -265,6 +275,7 @@ namespace Distenka.Tests.Scenarios.Packaging
 
 				return new Nuspec
 				{
+					NupkgPath = nupkg,
 					Id = Value("id"),
 					Version = Value("version"),
 					Files = zip.Entries.Select(e => e.FullName).ToList(),

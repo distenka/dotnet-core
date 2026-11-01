@@ -147,3 +147,38 @@ var output = details.Output;                                   // the captured s
 - `Timeline` and `Output` are the whole execution-log contract. `Timeline` entries carry the level from the `INFO:` / `WARN:` / `ERROR:` prefix and the elapsed time; runs archived before structured logs have entries without a level.
 - The executor keeps at most **2000 lines** of output, and the timeline is built from them: neither is a complete log archive. Put item-level results in a results file, not in the log.
 - `TryGetDetailsAsync` returns `null` instead of throwing when the run is not visible (`404`: unknown, another account's, or purged) — handy in polling loops.
+
+### Supplying the API key (Distenka.Client)
+
+The account key (`DK-…`) is a secret. You create it in the Distenka console — the SDK cannot issue, list or rotate keys — and it has **no expiry unless the owner set one when issuing it** (`expiresAt`, at most 3650 days). An expired or revoked key surfaces as a `401` from the platform (`DistenkaApiException`); the SDK never refreshes it.
+
+**In an application** (a service or tool that calls the platform), read it from configuration — any provider works:
+
+```csharp
+// appsettings.json holds only non-secret settings:  "Distenka": { "BaseAddress": "https://distenka.example.com/" }
+services.AddDistenkaClient(configuration.GetSection("Distenka"));   // also reads Distenka:ApiKey
+```
+
+- Environment variable: `Distenka__ApiKey=DK-…` (containers, CI, systemd units).
+- Development: `dotnet user-secrets set "Distenka:ApiKey" "DK-…"`.
+- Production: your vault's configuration provider (Azure Key Vault, AWS Secrets Manager, HashiCorp Vault, SOPS-decrypted files …) mapped to `Distenka:ApiKey`.
+
+`ApiKey` becomes an `AccountKeyCredential`. A value that is not an account key fails at startup with a message that never quotes it. An invocation key (`DKI-…`) is set in code with `InvocationKeyCredential`.
+
+**In a processor** that itself calls the platform (for example, to submit child runs), declare the key as a configuration property and let the platform supply it as an **owner binding**. The owner stores it once in the console and the platform merges it into each run's configuration server-side — it is never part of your package or of what a caller sends:
+
+```csharp
+public class MyConfig : Config
+{
+    public string DistenkaApiKey { get; set; }   // bound by the owner, never given a default
+}
+
+var credential = new AccountKeyCredential(Config.DistenkaApiKey);
+```
+
+**Never**
+
+- write the key in source code, `appsettings*.json`, launch profiles or test fixtures;
+- commit it to Git (the repository's `.gitleaks.toml` flags `DK-`/`DKI-`/`drc1.` values);
+- pack it into a NuGet package — the SDK's own packages are scanned for key-shaped strings in its tests;
+- log it — log the credential object instead: `AccountKeyCredential.ToString()` shows only the public prefix (`DK-0123ABCD…`), and the client redacts the `Authorization` header in `HttpClient` logs.

@@ -70,6 +70,9 @@ namespace Distenka.Tests
 		/// <summary>The built <c>Distenka.Tests.Cli.dll</c> (holds <c>LoggingProcessor</c>, DCS-042).</summary>
 		public static string TestsCliDll => BuiltDll(Path.Combine("test", "Distenka.Tests.Cli"), "Distenka.Tests.Cli.dll");
 
+		/// <summary>The built <c>Distenka.Tests.KeyCli.dll</c> (holds <c>PlatformCallerProcessor</c>, DCS-027).</summary>
+		public static string KeyCliDll => BuiltDll(Path.Combine("test", "Distenka.Tests.KeyCli"), "Distenka.Tests.KeyCli.dll");
+
 		static string BuiltDll(string projectDir, string dllName)
 		{
 			var baseDir = new DirectoryInfo(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));

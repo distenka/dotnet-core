@@ -1,0 +1,30 @@
+# Secret-scanning rules for this repository (DCS-027, AD-9). Wired into CI by DCS-014 (`gitleaks detect`).
+# The default gitleaks rules stay on; these add the Distenka credential shapes (ADR-006 §2.1).
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "distenka-account-key"
+description = "Distenka account key (DK-)"
+regex = '''\bDK-[0-9A-Fa-f]{32,125}\b'''
+keywords = ["dk-"]
+
+[[rules]]
+id = "distenka-invocation-key"
+description = "Distenka invocation key (DKI-)"
+regex = '''\bDKI-[0-9A-Fa-f]{32,124}\b'''
+keywords = ["dki-"]
+
+[[rules]]
+id = "distenka-run-capability"
+description = "Distenka run-result capability (drc1.)"
+regex = '''\bdrc1\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\b'''
+keywords = ["drc1."]
+
+# Test fixtures use deliberately fake keys built from the repeating digit run 0123456789ABCDEF; they are not secrets.
+[allowlist]
+description = "Fake keys in tests"
+regexTarget = "match"
+regexes = ['''(?i)(DKI?-)(0123456789ABCDEF)+''']
+paths = ['''(^|/)test/''']

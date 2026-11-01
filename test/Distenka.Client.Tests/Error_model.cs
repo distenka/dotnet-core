@@ -48,7 +48,10 @@ namespace Distenka.Client.Tests
 				"idempotency_key_malformed", "idempotency_key_reuse", "idempotency_key_in_flight",
 				"queue_depth_exceeded", "platform_backpressure", "platform_overloaded", "rate_limit_exceeded",
 				"quota_exhausted", "run_already_ended", "scope_violation", "invocation_key_required",
-				"run_capability_required", "processor_unavailable", "callbacks_unavailable", "capability_unavailable");
+				"run_capability_required", "processor_unavailable", "callbacks_unavailable", "capability_unavailable",
+				// DCS-060 AC 4 (re-homed from this story), from docs/api-callbacks.md:
+				"callback_not_https", "callback_userinfo", "callback_too_long", "callback_malformed", "callback_unresolvable",
+				"callback_private_address");
 		}
 
 		[Theory]

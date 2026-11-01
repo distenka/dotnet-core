@@ -30,6 +30,8 @@
     <ProjectReference Include="..\..\src\Distenka.Processor.Testing\Distenka.Processor.Testing.csproj" />
     <!-- Built first so the DCS-042 process-level tests can spawn it; not referenced as an assembly. -->
     <ProjectReference Include="..\Distenka.Tests.Cli\Distenka.Tests.Cli.csproj" ReferenceOutputAssembly="false" />
+    <!-- DCS-027: a processor that references Distenka.Client and reads an owner-bound account key. -->
+    <ProjectReference Include="..\Distenka.Tests.KeyCli\Distenka.Tests.KeyCli.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

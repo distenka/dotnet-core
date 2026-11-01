@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Distenka.Client.Authentication;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -9,8 +10,9 @@ namespace Distenka.Client.Internal
 	/// <summary>
 	/// Reads <see cref="DistenkaClientOptions"/> from a configuration section without the reflection-based binder:
 	/// <c>BaseAddress</c> (absolute URL), <c>Timeout</c> (<c>hh:mm:ss</c>), <c>AllowInsecureHttp</c> (<c>true</c>/<c>false</c>),
-	/// <c>UserAgent</c>, <c>MaxRetries</c> (integer), <c>MaxRetryDelay</c> (<c>hh:mm:ss</c>). Absent or empty keys leave the current value. Unparsable values fail with an
-	/// <see cref="OptionsValidationException"/> naming the key. The account key (<c>ApiKey</c>) is bound by DCS-027.
+	/// <c>UserAgent</c>, <c>MaxRetries</c> (integer), <c>MaxRetryDelay</c> (<c>hh:mm:ss</c>), and the account key <c>ApiKey</c>
+	/// (<c>DK-…</c>, DCS-027) as an <see cref="AccountKeyCredential"/>. Absent or empty keys leave the current value. Unparsable
+	/// values fail with an <see cref="OptionsValidationException"/> naming the key — never quoting an <c>ApiKey</c> value.
 	/// </summary>
 	static class ClientConfigurationReader
 	{
@@ -62,8 +64,29 @@ namespace Distenka.Client.Internal
 			if (Value(configuration, "UserAgent") is string userAgent)
 				options.UserAgent = userAgent;
 
+			// The key comes from whichever provider the host configured (environment variable Distenka__ApiKey, user secrets,
+			// a vault provider); the SDK never needs it as a literal (AD-9). The message never contains the value.
+			if (Value(configuration, "ApiKey") is string apiKey)
+			{
+				try
+				{
+					options.Credential = new AccountKeyCredential(apiKey);
+				}
+				catch (ArgumentException e)
+				{
+					failures.Add($"{prefix}ApiKey is not an account key. {FirstSentence(e.Message)}");
+				}
+			}
+
 			if (failures.Count > 0)
 				throw new OptionsValidationException(Options.DefaultName, typeof(DistenkaClientOptions), failures);
+		}
+
+		/// <summary>The credential's message without the parameter suffix .NET appends.</summary>
+		static string FirstSentence(string message)
+		{
+			var end = message.IndexOf(" (Parameter", StringComparison.Ordinal);
+			return end > 0 ? message.Substring(0, end) : message;
 		}
 
 		static string? Value(IConfiguration configuration, string key) =>
