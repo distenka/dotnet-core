@@ -289,16 +289,35 @@ namespace Distenka
 			if (plain)
 				services.AddSingleton(new RunOutputOptions { ForcePlain = true });
 
-			var config = reader.FromFile(configPath.FullName);
+			Config config;
+
+			try
+			{
+				config = reader.FromFile(configPath.FullName);
+			}
+			catch (Exception ex) when (ex is ConfigException || ex is IOException || ex is UnauthorizedAccessException)
+			{
+				// ADR-004 §2.2 row 7 / ADR-002 §2.4: a configuration the package cannot run is reported as one ERROR: line on
+				// stdout and exit code 1 — not as an unhandled exception with a stack trace on stderr.
+				services.AddTransient<IHostedService>(s => new ConfigErrorAction(ex.Message, s.GetRequiredService<IHostApplicationLifetime>()));
+				return;
+			}
+
 			config.__filePath = configPath.FullName;
 
-			if (!string.IsNullOrWhiteSpace(configPath.Directory.FullName))
-				Directory.SetCurrentDirectory(configPath.Directory.FullName);
+			// The working directory is left alone (DCS-044): under the executor it is the package folder, where the
+			// processor's own files live. Paths in the configuration are resolved against the configuration's folder.
+			var configDirectory = configPath.Directory?.FullName ?? Directory.GetCurrentDirectory();
 
 			if (resultsPath != null)
 			{
 				config.Execution.ResultsFilePath = resultsPath.FullName;
 				config.Execution.ResultsToFile = true;
+			}
+			else if (config.Execution.ResultsToFile)
+			{
+				var relative = string.IsNullOrWhiteSpace(config.Execution.ResultsFilePath) ? "results.json" : config.Execution.ResultsFilePath;
+				config.Execution.ResultsFilePath = Path.GetFullPath(Path.Combine(configDirectory, relative));
 			}
 
 			if (silent)

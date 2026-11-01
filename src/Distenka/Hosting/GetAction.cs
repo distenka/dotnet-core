@@ -34,9 +34,11 @@ namespace Distenka.Hosting
 				{
 					Process = _cache.Get(_ProcessType);
 				}
-				catch (TypeNotFoundException)
+				catch (TypeNotFoundException ex)
 				{
-					Console.WriteLine($"Could not find the Process type '{_ProcessType}'.");
+					// Unknown or ambiguous (ADR-002 §2.2 rule 3) — a local developer command; the reason names the candidates.
+					Console.Error.WriteLine(RunOutcome.ErrorLine(ex.Message));
+					Environment.ExitCode = 1;
 					return;
 				}
 
