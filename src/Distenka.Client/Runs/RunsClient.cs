@@ -60,6 +60,31 @@ namespace Distenka.Client.Runs
 			return new RunAccepted(accepted.RunId, accepted.ProcessorId, accepted.TrackingUrl, HttpTransport.IsReplayed(response));
 		}
 
+		public async Task<RunDetails> GetDetailsAsync(string runId, CancellationToken cancellationToken = default)
+		{
+			if (runId == null || runId.Trim().Length == 0)
+				throw new ArgumentException("A run id is required.", nameof(runId));
+
+			var path = "api/runs/" + Uri.EscapeDataString(runId.Trim()) + "/details";
+			using var response = await Transport.SendWithRetryAsync(() => Transport.CreateRequest(HttpMethod.Get, path),
+				HttpCompletionOption.ResponseContentRead, cancellationToken).ConfigureAwait(false);
+
+			return await ReadAsync(response, DistenkaJsonContext.Default.RunDetails, cancellationToken).ConfigureAwait(false)
+				?? throw new DistenkaApiException($"The Distenka API answered {(int)response.StatusCode} without run details.", response.StatusCode);
+		}
+
+		public async Task<RunDetails?> TryGetDetailsAsync(string runId, CancellationToken cancellationToken = default)
+		{
+			try
+			{
+				return await GetDetailsAsync(runId, cancellationToken).ConfigureAwait(false);
+			}
+			catch (DistenkaApiException e) when (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+			{
+				return null;
+			}
+		}
+
 		/// <summary><c>{ "processorId": …, "configurationJson": { … } }</c> (<c>docs/api-run-submission.md</c> §The request).</summary>
 		static byte[] SubmissionBody(string processorId, JsonElement configuration)
 		{

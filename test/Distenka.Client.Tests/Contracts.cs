@@ -165,8 +165,9 @@ namespace Distenka.Client.Tests
   ""dispatchingAt"": ""2026-10-01T02:40:05+00:00"", ""startedAt"": ""2026-10-01T02:40:11.123456+00:00"",
   ""completedAt"": ""2026-10-01T02:41:11.123456+00:00"", ""deadlineAt"": ""2026-10-01T21:48:40+00:00"",
   ""cancelRequestedAt"": ""2026-10-01T02:41:00+00:00"", ""attempt"": 1, ""invokedByKeyPrefix"": ""DKI-01234567"",
-  ""totalExecutionMs"": 60000, ""output"": ""INFO: done""
-}";
+  ""totalExecutionMs"": 60000, ""output"": ""INFO: done"",
+  ""timeline"": [ { ""timestamp"": ""2026-10-01T02:40:12+00:00"", ""message"": ""done"", ""level"": ""INFO"", ""elapsed"": 1000 } ]
+}"; // timeline item shape: platform RunDto.Step (DCS-031)
 
 			ShouldRoundTrip(json, Context.RunDetails);
 

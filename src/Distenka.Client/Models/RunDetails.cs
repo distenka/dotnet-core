@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Distenka.Client.Runs
@@ -6,8 +7,8 @@ namespace Distenka.Client.Runs
 	/// <summary>
 	/// The owner's view of one run — <c>GET /api/runs/{runId}/details</c> (<c>docs/api-run-submission.md</c> §Reading the run
 	/// back). Lifecycle timestamps are <see langword="null"/> for a stage the run has not reached, and for runs that predate
-	/// the platform's state machine. <see cref="Output"/> (and, from DCS-031, the timeline) is the run's own log and result:
-	/// there is no separate logs API (AD-13).
+	/// the platform's state machine. <see cref="Timeline"/> and <see cref="Output"/> are the run's own log and result —
+	/// the SDK's only execution-log surface: there is no logs endpoint (AD-13, ADR-007).
 	/// </summary>
 	public sealed class RunDetails
 	{
@@ -15,7 +16,8 @@ namespace Distenka.Client.Runs
 		[JsonConstructor]
 		public RunDetails(string? stateName, string? status, DateTimeOffset? createdAt, DateTimeOffset? queuedAt,
 			DateTimeOffset? dispatchingAt, DateTimeOffset? startedAt, DateTimeOffset? completedAt, DateTimeOffset? deadlineAt,
-			DateTimeOffset? cancelRequestedAt, int? attempt, string? invokedByKeyPrefix, long? totalExecutionMs, string? output)
+			DateTimeOffset? cancelRequestedAt, int? attempt, string? invokedByKeyPrefix, long? totalExecutionMs, string? output,
+			IReadOnlyList<RunTimelineEntry>? timeline)
 		{
 			StateName = stateName;
 			Status = status;
@@ -30,6 +32,7 @@ namespace Distenka.Client.Runs
 			InvokedByKeyPrefix = invokedByKeyPrefix;
 			TotalExecutionMs = totalExecutionMs;
 			Output = output;
+			Timeline = timeline ?? Array.Empty<RunTimelineEntry>();
 		}
 
 		/// <summary>The run's state; <see cref="RunState.Unknown"/> when the platform sent a name this SDK does not know (see <see cref="StateName"/>).</summary>
@@ -73,7 +76,18 @@ namespace Distenka.Client.Runs
 		/// <summary><see cref="CompletedAt"/> − <see cref="StartedAt"/>, in milliseconds.</summary>
 		public long? TotalExecutionMs { get; }
 
-		/// <summary>The run's output — what the processor wrote (capped by the executor).</summary>
+		/// <summary>
+		/// The run's captured output (stdout and stderr) as one text, exactly as the platform stored it. The executor keeps
+		/// at most <b>2000 lines</b>, so this is not a complete log archive: item-level results belong in a results file.
+		/// Together with <see cref="Timeline"/> it is the execution-log contract (AD-13); there is no logs endpoint.
+		/// </summary>
 		public string? Output { get; }
+
+		/// <summary>
+		/// The run's log as entries — one per line the processor wrote, with its level and elapsed time — built by the
+		/// platform from the captured output (so bounded by the same 2000-line cap). Empty when the platform sent none.
+		/// For runs archived before structured logs, entries come from plain text and have no <see cref="RunTimelineEntry.Level"/>.
+		/// </summary>
+		public IReadOnlyList<RunTimelineEntry> Timeline { get; }
 	}
 }

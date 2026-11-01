@@ -132,3 +132,18 @@ INFO: Disposition=Successful
 - Text written directly with `Console.Write*` is not touched; anything written to `Console.Error` fails the run.
 
 The contract is recorded in `docs/adr/ADR-009-sandbox-logging-contract.md` and `docs/adr/ADR-004-exit-code-and-stdout-contract.md`.
+
+### Reading execution logs (Distenka.Client)
+
+A run's log is read from the run itself — there is **no logs endpoint** (AD-13, `docs/adr/ADR-007-result-retrieval-over-rest.md`):
+
+```csharp
+var details = await client.Runs.GetDetailsAsync(runId);       // GET /api/runs/{runId}/details
+foreach (var entry in details.Timeline)                        // one entry per line the processor wrote
+    Console.WriteLine($"{entry.Elapsed} {entry.Level} {entry.Message}");
+var output = details.Output;                                   // the captured stdout/stderr, verbatim
+```
+
+- `Timeline` and `Output` are the whole execution-log contract. `Timeline` entries carry the level from the `INFO:` / `WARN:` / `ERROR:` prefix and the elapsed time; runs archived before structured logs have entries without a level.
+- The executor keeps at most **2000 lines** of output, and the timeline is built from them: neither is a complete log archive. Put item-level results in a results file, not in the log.
+- `TryGetDetailsAsync` returns `null` instead of throwing when the run is not visible (`404`: unknown, another account's, or purged) — handy in polling loops.

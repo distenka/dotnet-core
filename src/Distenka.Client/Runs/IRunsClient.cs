@@ -43,5 +43,27 @@ namespace Distenka.Client.Runs
 		/// <param name="cancellationToken">Cancels the request.</param>
 		Task<RunAccepted> SubmitAsync<TConfig>(string processorId, TConfig configuration, JsonTypeInfo<TConfig> configurationTypeInfo,
 			SubmitRunOptions? options = null, CancellationToken cancellationToken = default);
+
+		/// <summary>
+		/// Reads one of your runs — <c>GET /api/runs/{runId}/details</c>: its state, lifecycle timestamps, and its execution
+		/// log (<see cref="RunDetails.Timeline"/>, <see cref="RunDetails.Output"/>). This is the only way to read a run's
+		/// logs: there is no logs endpoint (AD-13).
+		/// </summary>
+		/// <param name="runId">The run's id, from <see cref="RunAccepted.RunId"/>.</param>
+		/// <param name="cancellationToken">Cancels the request.</param>
+		/// <exception cref="System.ArgumentException"><paramref name="runId"/> is empty.</exception>
+		/// <exception cref="DistenkaApiException">
+		/// <c>404</c> when the run does not exist, belongs to another account, or has been purged — the platform does not
+		/// distinguish them (use <see cref="TryGetDetailsAsync"/> to get <see langword="null"/> instead).
+		/// </exception>
+		Task<RunDetails> GetDetailsAsync(string runId, CancellationToken cancellationToken = default);
+
+		/// <summary>
+		/// Like <see cref="GetDetailsAsync"/>, but returns <see langword="null"/> for a <c>404</c> — convenient in polling loops,
+		/// where a run that is not (or no longer) visible is an expected outcome. Every other failure still throws.
+		/// </summary>
+		/// <param name="runId">The run's id.</param>
+		/// <param name="cancellationToken">Cancels the request.</param>
+		Task<RunDetails?> TryGetDetailsAsync(string runId, CancellationToken cancellationToken = default);
 	}
 }
