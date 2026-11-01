@@ -10,7 +10,11 @@ namespace Distenka.Client
 	/// failure is worth retrying.
 	/// </summary>
 	/// <remarks>
-	/// The message never contains request headers, credentials or the request body. A 401 means the credential was rejected
+	/// The message never contains request headers, credentials or the request body (DCS-080). When the SDK creates the
+	/// exception from a response, credential-shaped values the server or a proxy echoed back (<c>Bearer …</c>,
+	/// <c>DK-</c>/<c>DKI-</c> keys beyond their 8-digit public prefix, <c>drc1.</c> capabilities) are redacted from
+	/// <see cref="Exception.Message"/>, <see cref="Error"/>, <see cref="Body"/>, <see cref="RawContent"/> and
+	/// <see cref="RequestId"/>, so logging the exception is safe. A 401 means the credential was rejected
 	/// (missing, malformed, revoked or expired); the SDK never retries it or obtains a new token.
 	/// </remarks>
 	public class DistenkaApiException : Exception

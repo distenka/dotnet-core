@@ -13,7 +13,8 @@ namespace Distenka.Client.Internal
 	/// <summary>
 	/// Turns a non-success response into a <see cref="DistenkaApiException"/> (DCS-022). Replaces the deleted 1.x
 	/// <c>HttpExtensions.EnsureSuccess</c>, which only threw when reading the body failed. Reads at most
-	/// <see cref="BodyReadLimit"/> bytes of the body; never looks at request headers.
+	/// <see cref="BodyReadLimit"/> bytes of the body; never looks at request headers. Credential-shaped values in the body
+	/// and the request-id header are redacted (<see cref="SecretRedactor"/>, DCS-080).
 	/// </summary>
 	static class ApiErrorReader
 	{
@@ -37,15 +38,18 @@ namespace Distenka.Client.Internal
 		internal static async Task<DistenkaApiException> CreateAsync(HttpResponseMessage response, DateTimeOffset now, CancellationToken cancellationToken)
 		{
 			var bytes = await ReadBoundedAsync(response.Content, cancellationToken).ConfigureAwait(false);
-			var raw = bytes.Length == 0 ? null : Encoding.UTF8.GetString(bytes);
+
+			// DCS-080: a server or proxy may echo the presented credential. Redact once, then derive everything the exception
+			// carries — Code, Error, Body, RawContent and the message — from the redacted text.
+			var raw = bytes.Length == 0 ? null : SecretRedactor.Redact(Encoding.UTF8.GetString(bytes));
 
 			JsonElement? body = null;
 			string? code = null, error = null;
-			if (bytes.Length > 0)
+			if (raw != null)
 			{
 				try
 				{
-					using var document = JsonDocument.Parse(new ReadOnlyMemory<byte>(bytes));
+					using var document = JsonDocument.Parse(raw);
 					if (document.RootElement.ValueKind == JsonValueKind.Object)
 					{
 						body = document.RootElement.Clone();
@@ -125,7 +129,7 @@ namespace Distenka.Client.Internal
 			foreach (var name in RequestIdHeaders)
 			{
 				if (response.Headers.TryGetValues(name, out var values) && values.FirstOrDefault() is string value && value.Trim().Length > 0)
-					return Bound(value.Trim(), 256);
+					return Bound(SecretRedactor.Redact(value.Trim())!, 256);
 			}
 			return null;
 		}

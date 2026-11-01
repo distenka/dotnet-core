@@ -182,3 +182,17 @@ var credential = new AccountKeyCredential(Config.DistenkaApiKey);
 - commit it to Git (the repository's `.gitleaks.toml` flags `DK-`/`DKI-`/`drc1.` values);
 - pack it into a NuGet package — the SDK's own packages are scanned for key-shaped strings in its tests;
 - log it — log the credential object instead: `AccountKeyCredential.ToString()` shows only the public prefix (`DK-0123ABCD…`), and the client redacts the `Authorization` header in `HttpClient` logs.
+
+### Keeping credentials out of output
+
+The client's guarantees, all covered by tests (`test/Distenka.Client.Tests/Credential_hygiene.cs`):
+
+- `DistenkaApiException` never contains request headers or the request body. If the platform or a proxy in between echoes a credential back (an error page that lists the request headers, an error text that quotes the token), the SDK replaces it before it reaches `Message`, `Error`, `Body`, `RawContent` or `RequestId` — `Bearer …` becomes `Bearer *`, a key keeps only its public prefix (`DK-0123ABCD…`), a capability becomes `drc1.…`. Logging the exception (`logger.LogError(ex, …)`) is safe.
+- Every credential's `ToString()` shows only its public prefix: `DK-0123ABCD…`, `DKI-0123ABCD…`, `drc1.…`.
+- The `Authorization` header is redacted (`*`) in the `HttpClient` logs written under `System.Net.Http.HttpClient.Distenka.Client.*`, for the configured key and for a per-call capability. If you pass your own `HttpClient` to `new DistenkaClient(…)`, its logging is yours: redact `Authorization` (`RedactLoggedHeaders`) or don't log headers.
+- The client writes nothing to the console or to the `Debug`/`Trace` listeners.
+
+What stays your responsibility:
+
+- The run capability returned by an invocation (`InvocationAccepted.ResultCapability`) is a secret. Serializing `InvocationAccepted` to JSON writes it, so it can be stored and polled later — keep that JSON in a secret store, never in a log.
+- **Any** secret a processor needs — a database password or a third-party token as much as a `DK-` key — is an owner binding (ACC-37), never part of the configuration a caller submits. The platform stores the submitted configuration, shows it in the console (a value that looks like a secret replaces the whole displayed copy with `{}`) and reuses it for reruns.

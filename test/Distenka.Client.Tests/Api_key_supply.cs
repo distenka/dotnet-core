@@ -127,36 +127,5 @@ namespace Distenka.Client.Tests
 			options.ToString().Should().NotContain(Hex);
 			options.Credential.ToString().Should().NotContain(Hex);
 		}
-
-		sealed class CapturingLoggerProvider : ILoggerProvider
-		{
-			readonly List<string> messages = new List<string>();
-
-			public IReadOnlyList<string> Messages
-			{
-				get { lock (messages) return messages.ToList(); }
-			}
-
-			public ILogger CreateLogger(string categoryName) => new Logger(this);
-
-			public void Dispose() { }
-
-			sealed class Logger : ILogger
-			{
-				readonly CapturingLoggerProvider owner;
-
-				public Logger(CapturingLoggerProvider owner) => this.owner = owner;
-
-				public IDisposable BeginScope<TState>(TState state) => null;
-
-				public bool IsEnabled(LogLevel logLevel) => true;
-
-				public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-				{
-					lock (owner.messages)
-						owner.messages.Add(formatter(state, exception));
-				}
-			}
-		}
 	}
 }

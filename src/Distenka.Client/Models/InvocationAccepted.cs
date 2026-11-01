@@ -40,6 +40,11 @@ namespace Distenka.Client.Invocations
 		/// deployment has no capability signing key: the run was accepted, but its result cannot be read through the API —
 		/// tell the processor's developer.
 		/// </summary>
+		/// <remarks>
+		/// The capability is a secret. <see cref="RunCapabilityCredential.ToString"/> shows only <c>drc1.…</c>, but
+		/// serializing this object to JSON writes the capability itself (so it can be stored and read back to poll later):
+		/// keep such JSON in a secret store, never in logs.
+		/// </remarks>
 		[JsonConverter(typeof(RunCapabilityCredentialJsonConverter))]
 		public RunCapabilityCredential? ResultCapability { get; }
 
