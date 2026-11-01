@@ -50,6 +50,9 @@ namespace Distenka.Client.Authentication
 		/// </summary>
 		public DateTimeOffset? ExpiresAt { get; }
 
+		/// <summary>The capability, for writing it back in JSON (round-trips, tests). Never logged.</summary>
+		internal string Token => token;
+
 		/// <inheritdoc/>
 		public ValueTask<string> GetBearerTokenAsync(CancellationToken cancellationToken) => new ValueTask<string>(token);
 
