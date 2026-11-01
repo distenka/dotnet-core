@@ -11,6 +11,7 @@ using Xunit;
 namespace Distenka.Client.Tests
 {
 	/// <summary>
+	/// DCS-021 AC 5: the credential types add no acquire/cache/refresh member (checked by the same two tests).
 	/// DCS-020 AC 5: approval test of the public API of <c>Distenka.Client</c>. A new public member must be added to
 	/// <see cref="Approved"/> deliberately — and it may never be an account, login, token-refresh or key-management member
 	/// (AD-9, ADR-006 §2.2). AC 3: no default host is compiled into the assembly.
@@ -19,6 +20,19 @@ namespace Distenka.Client.Tests
 	{
 		static readonly string[] Approved =
 		{
+			"Distenka.Client.Authentication.AccountKeyCredential",
+			"Distenka.Client.Authentication.AccountKeyCredential::.ctor(String)",
+			"Distenka.Client.Authentication.AccountKeyCredential::GetBearerTokenAsync(CancellationToken)",
+			"Distenka.Client.Authentication.AccountKeyCredential::ToString()",
+			"Distenka.Client.Authentication.InvocationKeyCredential",
+			"Distenka.Client.Authentication.InvocationKeyCredential::.ctor(String)",
+			"Distenka.Client.Authentication.InvocationKeyCredential::GetBearerTokenAsync(CancellationToken)",
+			"Distenka.Client.Authentication.InvocationKeyCredential::ToString()",
+			"Distenka.Client.Authentication.RunCapabilityCredential",
+			"Distenka.Client.Authentication.RunCapabilityCredential::.ctor(String,Nullable`1)",
+			"Distenka.Client.Authentication.RunCapabilityCredential::ExpiresAt",
+			"Distenka.Client.Authentication.RunCapabilityCredential::GetBearerTokenAsync(CancellationToken)",
+			"Distenka.Client.Authentication.RunCapabilityCredential::ToString()",
 			"Distenka.Client.Authentication.IDistenkaCredential",
 			"Distenka.Client.Authentication.IDistenkaCredential::GetBearerTokenAsync(CancellationToken)",
 			"Distenka.Client.DistenkaClient",
