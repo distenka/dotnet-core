@@ -5,7 +5,8 @@
     `Distenka` package so job packages no longer ship them. Namespace stays `Distenka.Testing`, so test code keeps
     compiling after adding this package. Depends only on the processor host and Microsoft.Extensions.*; never on a test
     framework (it must work under xUnit, NUnit and MSTest) and never on Distenka.Client. net8.0 only (ADR-005 §2.1.5).
-    DCS-093 adds the executor-contract harness to this package.
+    DCS-093 adds the executor-contract harness (ExecutorContractHarness, ExecutorRules, DescriptorSchemaValidator), built
+    on System.Text.Json (in-box on net8.0), so the package still depends on the processor host only.
   -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -15,10 +16,14 @@
     <Version>2.0.0-preview.1</Version>
     <Company>Distenka</Company>
     <Authors>distenka</Authors>
-    <Description>Test helpers (TestHost, TestRun) for Distenka processors.</Description>
+    <Description>Test helpers for Distenka processors: TestHost/TestRun, and an executor-contract harness that runs a built package the way the platform does.</Description>
     <PackageProjectUrl>https://github.com/distenka/dotnet-core</PackageProjectUrl>
     <PackageTags>distenka;processor;testing</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Distenka.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Distenka.Processor\Distenka.Processor.csproj" />

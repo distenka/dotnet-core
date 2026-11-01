@@ -12,37 +12,24 @@ using System.Threading.Tasks;
 namespace Distenka.Tests
 {
 	/// <summary>
-	/// A port of the platform executor's run-path rules, used to assert agreement with ADR-004.
-	/// Mirrors <c>D:\Product\Distenka\Distenka.Core.Executor\Program.cs</c> @ <c>4c3cf2c</c> (file last changed <c>cdd1a54</c>):
-	/// stdout handler <c>:245-260</c>, stderr handler <c>:262-276</c>, verdict <c>:326-328</c> / <c>:357-359</c>,
-	/// <c>ParseLogLevel</c> <c>:427-433</c>. Re-verify whenever that file changes. DCS-093 replaces this minimal port with the
-	/// reusable <c>ExecutorContractHarness</c>.
+	/// The platform executor's run-path rules, as used by the process-level tests to assert agreement with ADR-004. Since
+	/// DCS-093 a thin adapter over the shipped <see cref="Distenka.Testing.ExecutorRules"/> (Distenka.Processor.Testing,
+	/// pinned to platform commit 4c3cf2c), so the rules live in one place.
 	/// </summary>
 	static class ExecutorRules
 	{
 		/// <summary><c>ParseLogLevel</c>, <c>Program.cs:427-433</c>.</summary>
-		public static string ParseLogLevel(string line)
-		{
-			if (Regex.IsMatch(line, @"ERROR:", RegexOptions.IgnoreCase)) return "ERROR";
-			if (Regex.IsMatch(line, @"(WARNING|WARN):", RegexOptions.IgnoreCase)) return "WARNING";
-			if (line.Contains("Exception") || line.Contains("error:")) return "ERROR";
-			return "INFO";
-		}
+		public static string ParseLogLevel(string line) => Distenka.Testing.ExecutorRules.ParseLogLevel(line);
 
 		/// <summary>Whether a stdout line sets <c>hasPluginErrors</c> (<c>Program.cs:245-260</c>).</summary>
-		public static bool IsErrorStdoutLine(string line) =>
-			ParseLogLevel(line) == "ERROR" || line.Contains("Exception");
+		public static bool IsErrorStdoutLine(string line) => Distenka.Testing.ExecutorRules.IsErrorStdoutLine(line);
 
 		/// <summary>The platform's final run state for a finished plugin process.</summary>
 		public static string FinalState(ProcessRun run)
 		{
 			// Any stderr line sets hasPluginErrors (:262-276).
 			var hasPluginErrors = run.Stderr.Count > 0 || run.Stdout.Any(IsErrorStdoutLine);
-
-			var infraSuccess = run.ExitCode != -1;
-			bool? pluginSuccess = infraSuccess ? (run.ExitCode == 0 && !hasPluginErrors) : (bool?)null;
-
-			return infraSuccess ? (pluginSuccess == true ? "Completed" : "Failed") : "Failed";
+			return Distenka.Testing.ExecutorRules.FinalState(Distenka.Testing.ExecutorRules.PluginSuccess(run.ExitCode, hasPluginErrors));
 		}
 	}
 

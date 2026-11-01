@@ -165,6 +165,28 @@ var summary = details.TryParseSummary();          // null when the output has no
 if (summary?.Disposition == RunDisposition.Cancelled) { /* … */ }
 ```
 
+### Checking a package before you upload it (Distenka.Processor.Testing)
+
+`ExecutorContractHarness` runs your built processor the way the Distenka executor does — `dotnet exec <dll> list` as at package validation, `dotnet <dll> run <config>` as for a run, with a cleared environment, the 256 MB heap limit and the DLL folder as working directory — and judges the result by the executor's own rules (pinned to the platform commit they were read from, `ExecutorRules.SourceCommit`):
+
+```csharp
+var harness = new ExecutorContractHarness("bin/Release/net8.0/MyJob.dll");
+
+var list = await harness.ListAsync();
+Assert.True(list.SchemaUsable, list.ToString());        // the platform can compile your input schema
+
+var run = await harness.RunAsync("""{ "customerId": "c-1" }""");
+Assert.Equal("Completed", run.FinalState);               // what the platform would record
+Assert.Empty(run.Violations);                            // e.g. a line with "Exception" on a successful run
+```
+
+- `ListVerdict`: `Accepted` (package validation passes), `SchemaUsable` (the processor can be invoked), `SchemaErrors`, `Rejection` (the executor's message when it refuses the package).
+- `RunVerdict`: `ExitCode`, `PluginSuccess`, `FinalState`, `Output` (the first 2000 lines, as stored), `SummaryLine` / `SummaryDisposition`.
+- `Violations` lists where the package departs from the SDK's executor contract even when the platform would accept it: anything on stderr, a line that makes a successful run Failed, a failed run without its `ERROR:` line, a missing run summary, more than 2000 lines of output, or text besides the schema from `list`.
+- `DescriptorSchemaValidator.Validate(json)` checks a schema on its own; `ExecutorRules` exposes the individual rules (`ParseLogLevel`, `PluginSuccess`, `ExtractJsonObject`).
+
+The package has no test-framework dependency; use it from xUnit, NUnit or MSTest. The executor's rules are heuristics, not a specification: re-check after a platform upgrade.
+
 ### Reading execution logs (Distenka.Client)
 
 A run's log is read from the run itself — there is **no logs endpoint** (AD-13, `docs/adr/ADR-007-result-retrieval-over-rest.md`):
