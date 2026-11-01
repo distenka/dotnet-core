@@ -53,7 +53,7 @@ namespace Distenka.Client.Runs
 			using var response = await Transport.SendWithRetryAsync(CreateRequest, HttpCompletionOption.ResponseContentRead, cancellationToken)
 				.ConfigureAwait(false);
 
-			var accepted = await ReadAsync(response, DistenkaJsonContext.Default.RunAccepted, cancellationToken).ConfigureAwait(false);
+			var accepted = await ResponseReader.ReadAsync(response, DistenkaJsonContext.Default.RunAccepted, cancellationToken).ConfigureAwait(false);
 			if (accepted == null || accepted.RunId == null || accepted.RunId.Length == 0)
 				throw new DistenkaApiException($"The Distenka API answered {(int)response.StatusCode} without a run id.", response.StatusCode);
 
@@ -69,7 +69,7 @@ namespace Distenka.Client.Runs
 			using var response = await Transport.SendWithRetryAsync(() => Transport.CreateRequest(HttpMethod.Get, path),
 				HttpCompletionOption.ResponseContentRead, cancellationToken).ConfigureAwait(false);
 
-			return await ReadAsync(response, DistenkaJsonContext.Default.RunDetails, cancellationToken).ConfigureAwait(false)
+			return await ResponseReader.ReadAsync(response, DistenkaJsonContext.Default.RunDetails, cancellationToken).ConfigureAwait(false)
 				?? throw new DistenkaApiException($"The Distenka API answered {(int)response.StatusCode} without run details.", response.StatusCode);
 		}
 
@@ -99,7 +99,7 @@ namespace Distenka.Client.Runs
 				using var response = await Transport.SendWithRetryAsync(() => Transport.CreateRequest(HttpMethod.Post, path),
 					HttpCompletionOption.ResponseContentRead, cancellationToken, replaySafe: true).ConfigureAwait(false);
 
-				var result = await ReadAsync(response, DistenkaJsonContext.Default.CancelResult, cancellationToken).ConfigureAwait(false);
+				var result = await ResponseReader.ReadAsync(response, DistenkaJsonContext.Default.CancelResult, cancellationToken).ConfigureAwait(false);
 				if (result == null)
 					throw new DistenkaApiException($"The Distenka API answered {(int)response.StatusCode} without a cancellation body.", response.StatusCode);
 
@@ -145,21 +145,6 @@ namespace Distenka.Client.Runs
 				writer.WriteEndObject();
 			}
 			return buffer.ToArray();
-		}
-
-		static async Task<T?> ReadAsync<T>(HttpResponseMessage response, JsonTypeInfo<T> typeInfo, CancellationToken cancellationToken)
-			where T : class
-		{
-			try
-			{
-				using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-				return await JsonSerializer.DeserializeAsync(stream, typeInfo, cancellationToken).ConfigureAwait(false);
-			}
-			catch (JsonException e)
-			{
-				throw new DistenkaApiException($"The Distenka API answered {(int)response.StatusCode} with a body that is not the expected JSON.",
-					response.StatusCode, innerException: e);
-			}
 		}
 	}
 }

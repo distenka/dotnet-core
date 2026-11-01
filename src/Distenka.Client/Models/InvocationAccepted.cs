@@ -21,6 +21,14 @@ namespace Distenka.Client.Invocations
 			ResultCapabilityExpiresAt = resultCapabilityExpiresAt;
 		}
 
+		/// <summary>Creates the value including <see cref="Replayed"/>, which comes from a response header, not the body.</summary>
+		public InvocationAccepted(string runId, string? status, RunCapabilityCredential? resultCapability, DateTimeOffset? resultCapabilityExpiresAt,
+			bool replayed)
+			: this(runId, status, resultCapability, resultCapabilityExpiresAt)
+		{
+			Replayed = replayed;
+		}
+
 		/// <summary>The run's id.</summary>
 		public string RunId { get; }
 
@@ -35,7 +43,14 @@ namespace Distenka.Client.Invocations
 		[JsonConverter(typeof(RunCapabilityCredentialJsonConverter))]
 		public RunCapabilityCredential? ResultCapability { get; }
 
-		/// <summary>When <see cref="ResultCapability"/> expires.</summary>
+		/// <summary>When <see cref="ResultCapability"/> expires (also set on the credential's <see cref="RunCapabilityCredential.ExpiresAt"/>).</summary>
 		public DateTimeOffset? ResultCapabilityExpiresAt { get; }
+
+		/// <summary>
+		/// <see langword="true"/> when the platform answered <c>200</c> with <c>Idempotency-Replayed: true</c>: this
+		/// <c>Idempotency-Key</c> had already started this run, and nothing new was started or charged.
+		/// </summary>
+		[JsonIgnore]
+		public bool Replayed { get; }
 	}
 }

@@ -66,6 +66,16 @@ namespace Distenka.Client
 		/// <summary>The JSON error body (other members such as <c>limit</c> are read from here); <see langword="null"/> when the body is not JSON.</summary>
 		public JsonElement? Body { get; }
 
+		/// <summary>
+		/// The <c>limit</c> member of the error body, when present as a number — e.g. the request allowance on a
+		/// <c>402 quota_exhausted</c>, or the queue limit on a <c>429 queue_depth_exceeded</c>.
+		/// </summary>
+		public long? Limit =>
+			Body is JsonElement body && body.ValueKind == JsonValueKind.Object && body.TryGetProperty("limit", out var limit) &&
+			limit.ValueKind == JsonValueKind.Number && limit.TryGetInt64(out var value)
+				? value
+				: (long?)null;
+
 		/// <summary>The response body as text, truncated to 4096 characters; <see langword="null"/> when there was no body.</summary>
 		public string? RawContent { get; }
 
