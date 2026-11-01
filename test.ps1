@@ -1,12 +1,13 @@
 ﻿<#
 .SYNOPSIS
-    DEV validation: builds the whole solution (warnings are errors) and runs the Distenka.Tests suite.
+    DEV validation: builds the whole solution (warnings are errors) and runs every test project in it.
 
 .DESCRIPTION
     1. Checks that the .NET SDK pinned by global.json (8.0 feature band, ADR-005 §2.3) is installed.
     2. Builds Distenka.sln from scratch (--no-incremental, so every warning is reported) with -warnaserror,
        unless -AllowWarnings is given (DCS-010 AC 1: zero warnings).
-    3. Runs test/Distenka.Tests without rebuilding. Besides unit tests this includes:
+    3. Runs the solution's test projects without rebuilding: test/Distenka.Tests (processor host) and
+       test/Distenka.Client.Tests (client: options, registration, request headers, API surface). Distenka.Tests includes:
        - process-level tests that spawn the built Distenka.Diagnostics.dll / Distenka.Tests.Cli.dll with
          `dotnet <dll> run <config>` the way the platform executor does (DCS-040/042);
        - package-boundary tests that `dotnet pack --no-build` the Distenka, Distenka.Client and
@@ -54,7 +55,7 @@ try {
     & dotnet @buildArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-    $testArgs = @('test', 'test/Distenka.Tests/Distenka.Tests.csproj', '-c', $Configuration, '--no-build',
+    $testArgs = @('test', 'Distenka.sln', '-c', $Configuration, '--no-build',
         '--logger', 'console;verbosity=normal')
     if ($Filter) { $testArgs += @('--filter', $Filter) }
 
