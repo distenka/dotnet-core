@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The processor host (ADR-001 §2.3, AD-12). The project lives in src/Distenka.Processor, but the package id and the
+    assembly name stay `Distenka`: every published job package ships `Distenka.dll`. Namespaces are unchanged (ADR-001 §2.4).
+    Single target framework: the executor image runs .NET 8 and picks the main DLL by file name (ADR-005 §2.1).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>Distenka</AssemblyName>
+    <RootNamespace>Distenka</RootNamespace>
+    <PackageId>Distenka</PackageId>
+    <Version>2.0.0-preview.1</Version>
+    <Company>Distenka</Company>
+    <Authors>distenka</Authors>
+    <Description>dotnet-core</Description>
+    <PackageProjectUrl>https://github.com/distenka/dotnet-core</PackageProjectUrl>
+    <PackageTags>ai;vibe-coding;serverless;awesome;Processor;batch</PackageTags>
+  </PropertyGroup>
+
+  <!-- Versions: Directory.Packages.props. Allowed dependencies: ADR-001 §2.1 (asserted by Package_boundaries). -->
+  <ItemGroup>
+    <PackageReference Include="Ben.Demystifier" />
+    <PackageReference Include="MessagePack.Annotations" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="NJsonSchema" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="System.ComponentModel.Annotations" />
+  </ItemGroup>
+
+</Project>

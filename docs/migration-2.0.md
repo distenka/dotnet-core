@@ -36,3 +36,17 @@ config.DistenkaApi.Uri = "https://api.distenka.ai/";
 - **Validation at `run`:** members marked `[Required]` (or `[JsonProperty(Required = …)]`) must be present in the document, and DataAnnotations attributes — including `[RegularExpression]`, `[EmailAddress]`, `[Url]`, `[Compare]` and custom `ValidationAttribute`s — are enforced on the configuration and its nested objects. A violation fails the run with one `ERROR:` line naming the member, exit code 1.
 - **The working directory is no longer changed** to the configuration file's folder. Code that opened files relative to the configuration file must build the path itself; relative `execution.resultsFilePath` values are still resolved against the configuration's folder.
 - Configuration errors are written as one `ERROR:` line on stdout with exit code 1 — never as a stack trace on stderr.
+
+## Packages: `TestHost` / `TestRun` moved to `Distenka.Processor.Testing` (DCS-010)
+
+The SDK is now three packages (ADR-001): **`Distenka`** (the processor host — same package id, same `Distenka.dll`, same namespaces, so job packages and processor code are unaffected), **`Distenka.Processor.Testing`** and **`Distenka.Client`** (the REST client; empty in this preview, its API arrives with the following stories).
+
+- **`TestHost<TProcess>` and `TestRun<TProcess>` are no longer in the `Distenka` package**, so job packages no longer ship test helpers. Test projects that use them add a reference to `Distenka.Processor.Testing` (same version as `Distenka`). The namespace is unchanged (`Distenka.Testing`), so no `using` changes are needed.
+- `Average`, `DataPoint` and `Metric` stay in the `Distenka` package (namespace `Distenka.Testing`), because the runtime uses them.
+- `TestRun<TProcess>.Process` now returns the processor under test; in 1.x it was always `null` (the constructor assigned the parameter to itself).
+
+```xml
+<!-- test project -->
+<PackageReference Include="Distenka" Version="2.0.0-preview.1" />
+<PackageReference Include="Distenka.Processor.Testing" Version="2.0.0-preview.1" />
+```

@@ -34,7 +34,7 @@ namespace Distenka.Testing
 		/// </summary>
 		public ResultLog Results { get; }
 
-		internal TestRun(TProcess Process, Execution execution, ResultLog results, ServiceProvider services) => (Process, Execution, Results, Services) = (Process, execution, results, services);
+		internal TestRun(TProcess process, Execution execution, ResultLog results, ServiceProvider services) => (Process, Execution, Results, Services) = (process, execution, results, services);
 
 		/// <summary>
 		/// Performs clean up.

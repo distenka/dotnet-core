@@ -1,0 +1,25 @@
+﻿<Project>
+
+  <!-- Shared build settings for every project in this repository (DCS-010). Packaging/versioning: DCS-011. -->
+  <PropertyGroup>
+    <!--
+      C# 12 = the default for net8.0 (ADR-005 §2.3). Set explicitly so the client's netstandard2.0 target (default C# 7.3)
+      compiles the same language as everything else. Nullable is NOT enabled repository-wide: the processor host is
+      nullable-oblivious and would produce hundreds of warnings; projects opt in (Distenka.Client, Distenka.Tests.Cli).
+    -->
+    <LangVersion>12.0</LangVersion>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true' or '$(TF_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- DCS-010 AC 1: zero warnings in CI. Locally, ./test.ps1 builds with -warnaserror unless -AllowWarnings is passed. -->
+    <TreatWarningsAsErrors Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!--
+    Template content (src/Templates/templates/**) is copied into users' folders by `dotnet new`, and the samples are
+    stand-alone projects; both keep their own package versions instead of Directory.Packages.props.
+  -->
+  <PropertyGroup Condition="$([System.String]::Copy('$(MSBuildProjectDirectory)').Replace('\','/').Contains('/src/Templates/'))">
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+</Project>

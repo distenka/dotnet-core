@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Test helpers for processor authors (ADR-001 §2.1, §2.4): TestHost<TProcess> and TestRun<TProcess>, moved out of the
+    `Distenka` package so job packages no longer ship them. Namespace stays `Distenka.Testing`, so test code keeps
+    compiling after adding this package. Depends only on the processor host and Microsoft.Extensions.*; never on a test
+    framework (it must work under xUnit, NUnit and MSTest) and never on Distenka.Client. net8.0 only (ADR-005 §2.1.5).
+    DCS-093 adds the executor-contract harness to this package.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>Distenka.Processor.Testing</AssemblyName>
+    <RootNamespace>Distenka.Testing</RootNamespace>
+    <PackageId>Distenka.Processor.Testing</PackageId>
+    <Version>2.0.0-preview.1</Version>
+    <Company>Distenka</Company>
+    <Authors>distenka</Authors>
+    <Description>Test helpers (TestHost, TestRun) for Distenka processors.</Description>
+    <PackageProjectUrl>https://github.com/distenka/dotnet-core</PackageProjectUrl>
+    <PackageTags>distenka;processor;testing</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Distenka.Processor\Distenka.Processor.csproj" />
+  </ItemGroup>
+
+</Project>
