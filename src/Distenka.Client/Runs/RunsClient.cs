@@ -85,6 +85,53 @@ namespace Distenka.Client.Runs
 			}
 		}
 
+		public async Task<CancelResult> CancelAsync(string runId, CancelRunOptions? options = null, CancellationToken cancellationToken = default)
+		{
+			if (runId == null || runId.Trim().Length == 0)
+				throw new ArgumentException("A run id is required.", nameof(runId));
+
+			var id = runId.Trim();
+			var path = "api/runs/" + Uri.EscapeDataString(id) + "/cancel";
+
+			try
+			{
+				// "Repeating a cancel is safe" (docs/api-run-cancellation.md): replay-safe without an Idempotency-Key.
+				using var response = await Transport.SendWithRetryAsync(() => Transport.CreateRequest(HttpMethod.Post, path),
+					HttpCompletionOption.ResponseContentRead, cancellationToken, replaySafe: true).ConfigureAwait(false);
+
+				var result = await ReadAsync(response, DistenkaJsonContext.Default.CancelResult, cancellationToken).ConfigureAwait(false);
+				if (result == null)
+					throw new DistenkaApiException($"The Distenka API answered {(int)response.StatusCode} without a cancellation body.", response.StatusCode);
+
+				return result;
+			}
+			catch (DistenkaApiException e) when (e.Code == DistenkaErrorCodes.RunAlreadyEnded && !(options?.ThrowOnAlreadyEnded ?? false))
+			{
+				return new CancelResult(id, status: null, cancelRequestedAt: null, alreadyEnded: true, endedState: EndedState(e));
+			}
+		}
+
+		/// <summary>
+		/// The state named by a <c>409 run_already_ended</c> body. The docs say the body "carries the state the run ended in"
+		/// without naming the member; <c>state</c> is the platform's name for it elsewhere (details), so it is read first.
+		/// Unconfirmed until STAGE (DCS-033).
+		/// </summary>
+		static RunState? EndedState(DistenkaApiException error)
+		{
+			if (error.Body is not System.Text.Json.JsonElement body || body.ValueKind != JsonValueKind.Object)
+				return null;
+
+			foreach (var name in new[] { "state", "endedState", "finalState" })
+			{
+				foreach (var property in body.EnumerateObject())
+				{
+					if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind == JsonValueKind.String)
+						return RunStateNames.Parse(property.Value.GetString());
+				}
+			}
+			return null;
+		}
+
 		/// <summary><c>{ "processorId": …, "configurationJson": { … } }</c> (<c>docs/api-run-submission.md</c> §The request).</summary>
 		static byte[] SubmissionBody(string processorId, JsonElement configuration)
 		{

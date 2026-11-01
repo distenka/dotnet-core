@@ -65,5 +65,22 @@ namespace Distenka.Client.Runs
 		/// <param name="runId">The run's id.</param>
 		/// <param name="cancellationToken">Cancels the request.</param>
 		Task<RunDetails?> TryGetDetailsAsync(string runId, CancellationToken cancellationToken = default);
+
+		/// <summary>
+		/// Asks the platform to cancel one of your runs — <c>POST /api/runs/{runId}/cancel</c> — at whatever point it has
+		/// reached. The request is recorded before the platform answers; a queued run is cancelled at once, a running one by
+		/// its executor shortly after, so read the run's details to see when it is <see cref="RunState.Cancelled"/>.
+		/// Repeating a cancel is safe and returns the first request's time.
+		/// </summary>
+		/// <param name="runId">The run's id.</param>
+		/// <param name="options">Optional settings (<see cref="CancelRunOptions.ThrowOnAlreadyEnded"/>).</param>
+		/// <param name="cancellationToken">Cancels this HTTP request — not the run.</param>
+		/// <returns>
+		/// The cancellation request; <see cref="CancelResult.AlreadyEnded"/> is <see langword="true"/> (and
+		/// <see cref="CancelResult.EndedState"/> set when reported) if the run had already ended.
+		/// </returns>
+		/// <exception cref="System.ArgumentException"><paramref name="runId"/> is empty.</exception>
+		/// <exception cref="DistenkaApiException"><c>404</c> for a run that is not yours, does not exist or was purged.</exception>
+		Task<CancelResult> CancelAsync(string runId, CancelRunOptions? options = null, CancellationToken cancellationToken = default);
 	}
 }
