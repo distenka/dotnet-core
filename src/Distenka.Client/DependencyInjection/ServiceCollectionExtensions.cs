@@ -34,7 +34,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
 		/// <summary>
 		/// Registers <see cref="IDistenkaClient"/> over <see cref="IHttpClientFactory"/>, with options read from a
-		/// configuration section (keys <c>BaseAddress</c>, <c>Timeout</c>, <c>AllowInsecureHttp</c>, <c>UserAgent</c>),
+		/// configuration section (keys <c>BaseAddress</c>, <c>Timeout</c>, <c>AllowInsecureHttp</c>, <c>UserAgent</c>,
+		/// <c>MaxRetries</c>, <c>MaxRetryDelay</c>),
 		/// e.g. <c>services.AddDistenkaClient(configuration.GetSection("Distenka"))</c>. Validated when the host starts.
 		/// </summary>
 		/// <param name="services">The service collection.</param>

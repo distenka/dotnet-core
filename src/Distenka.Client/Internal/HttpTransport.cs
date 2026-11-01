@@ -1,4 +1,5 @@
 ﻿using Distenka.Client.Authentication;
+using Distenka.Client.Resilience;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -13,7 +14,7 @@ namespace Distenka.Client.Internal
 	/// The single path every request takes (DCS-020): builds request URIs from <see cref="DistenkaClientOptions.BaseAddress"/>
 	/// and adds the <c>User-Agent</c> and <c>Authorization</c> headers. Applying them per request — instead of in a
 	/// <see cref="DelegatingHandler"/> — gives a caller-supplied <see cref="HttpClient"/> the same behaviour as the one
-	/// created by <c>AddDistenkaClient</c>. Timeouts per call: DCS-024; retries: DCS-025.
+	/// created by <c>AddDistenkaClient</c>. Retries (DCS-025): <see cref="SendWithRetryAsync"/>. Timeouts per call: DCS-024.
 	/// </summary>
 	sealed class HttpTransport
 	{
@@ -29,14 +30,23 @@ namespace Distenka.Client.Internal
 		/// <param name="httpClient">Sends the requests; not owned.</param>
 		/// <param name="options">Already validated; values are copied, later changes are not observed.</param>
 		internal HttpTransport(HttpClient httpClient, DistenkaClientOptions options)
+			: this(httpClient, options, null)
+		{
+		}
+
+		/// <param name="retryPolicy">Replaces the policy built from <paramref name="options"/> (tests inject the clock and randomness).</param>
+		internal HttpTransport(HttpClient httpClient, DistenkaClientOptions options, RetryPolicy? retryPolicy)
 		{
 			HttpClient = httpClient;
+			RetryPolicy = retryPolicy ?? new RetryPolicy(options.MaxRetries, options.MaxRetryDelay);
 			BaseAddress = WithTrailingSlash(options.BaseAddress!);
 			credential = options.Credential;
 			applicationUserAgent = options.UserAgent is string ua && ua.Trim().Length > 0 ? ua.Trim() : null;
 		}
 
 		internal HttpClient HttpClient { get; }
+
+		internal RetryPolicy RetryPolicy { get; }
 
 		/// <summary>The configured base address, always ending with <c>/</c> so relative paths append to it.</summary>
 		internal Uri BaseAddress { get; }
@@ -52,7 +62,67 @@ namespace Distenka.Client.Internal
 			return new HttpRequestMessage(method, new Uri(BaseAddress, relativePath.TrimStart('/')));
 		}
 
-		/// <summary>Adds the SDK headers and sends <paramref name="request"/>.</summary>
+		/// <summary>
+		/// Sends a request built by <paramref name="createRequest"/> (called once per attempt: a request message cannot be
+		/// sent twice), retrying per <see cref="RetryPolicy"/>. Returns a success (2xx) response; any other final outcome
+		/// throws a <see cref="DistenkaApiException"/> carrying the last response's status, code and <c>Retry-After</c>.
+		/// </summary>
+		/// <param name="createRequest">Builds a fresh request, content included, for each attempt.</param>
+		/// <param name="completionOption">When the returned task completes.</param>
+		/// <param name="cancellationToken">Cancels the request and any wait between attempts.</param>
+		/// <param name="replaySafe">
+		/// The operation is documented as safe to repeat although it is neither <c>GET</c>/<c>HEAD</c> nor carries an
+		/// <c>Idempotency-Key</c> (e.g. cancelling a run: "repeating a cancel is safe").
+		/// </param>
+		internal async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> createRequest, HttpCompletionOption completionOption,
+			CancellationToken cancellationToken, bool replaySafe = false)
+		{
+			if (createRequest == null)
+				throw new ArgumentNullException(nameof(createRequest));
+
+			var previous = RetryPolicy.BaseDelay;
+			for (var attempt = 0; ; attempt++)
+			{
+				using var request = createRequest();
+				var safe = replaySafe || RetryPolicy.IsReplaySafe(request);
+				var mayRetry = safe && attempt < RetryPolicy.MaxRetries;
+
+				HttpResponseMessage response;
+				try
+				{
+					response = await SendAsync(request, completionOption, cancellationToken).ConfigureAwait(false);
+				}
+				catch (HttpRequestException) when (mayRetry && !cancellationToken.IsCancellationRequested)
+				{
+					// Network failure: the request may or may not have reached the platform, so only a replay-safe one is repeated.
+					await RetryPolicy.DelayAsync(RetryPolicy.NextDelay(null, ref previous)!.Value, cancellationToken).ConfigureAwait(false);
+					continue;
+				}
+
+				if (response.IsSuccessStatusCode)
+					return response;
+
+				DistenkaApiException error;
+				using (response)
+					error = await ApiErrorReader.CreateAsync(response, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
+
+				if (!mayRetry || !error.IsRetryable)
+					throw error;
+
+				var wait = RetryPolicy.NextDelay(error.RetryAfter, ref previous);
+				if (wait == null)
+					throw error; // Retry-After beyond MaxRetryDelay: the caller schedules it from error.RetryAfter.
+
+				await RetryPolicy.DelayAsync(wait.Value, cancellationToken).ConfigureAwait(false);
+			}
+		}
+
+		/// <summary>Whether a success response is an idempotent replay (<c>Idempotency-Replayed: true</c>).</summary>
+		internal static bool IsReplayed(HttpResponseMessage response) =>
+			response.Headers.TryGetValues("Idempotency-Replayed", out var values) &&
+			values.Any(v => string.Equals(v.Trim(), "true", StringComparison.OrdinalIgnoreCase));
+
+		/// <summary>Adds the SDK headers and sends <paramref name="request"/> once (no retry).</summary>
 		internal async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
 		{
 			await PrepareAsync(request, cancellationToken).ConfigureAwait(false);

@@ -156,6 +156,8 @@ namespace Distenka.Client.Tests
 				["Distenka:Timeout"] = "00:00:30",
 				["Distenka:AllowInsecureHttp"] = "true",
 				["Distenka:UserAgent"] = "MyApp/1.2",
+				["Distenka:MaxRetries"] = "5",
+				["Distenka:MaxRetryDelay"] = "00:00:10",
 			}).Build();
 
 			using var provider = new ServiceCollection().AddDistenkaClient(configuration.GetSection("Distenka")).Services.BuildServiceProvider();
@@ -165,6 +167,8 @@ namespace Distenka.Client.Tests
 			options.Timeout.Should().Be(TimeSpan.FromSeconds(30));
 			options.AllowInsecureHttp.Should().BeTrue();
 			options.UserAgent.Should().Be("MyApp/1.2");
+			options.MaxRetries.Should().Be(5);
+			options.MaxRetryDelay.Should().Be(TimeSpan.FromSeconds(10));
 
 			provider.GetRequiredService<IDistenkaClient>().Should().NotBeNull();
 		}
@@ -173,6 +177,8 @@ namespace Distenka.Client.Tests
 		[InlineData("BaseAddress", "not a url")]
 		[InlineData("Timeout", "soon")]
 		[InlineData("AllowInsecureHttp", "maybe")]
+		[InlineData("MaxRetries", "three")]
+		[InlineData("MaxRetryDelay", "long")]
 		public void unparsable_configuration_values_name_the_key(string key, string value)
 		{
 			var values = new Dictionary<string, string> { ["Distenka:BaseAddress"] = "https://api.example/", [$"Distenka:{key}"] = value };

@@ -47,6 +47,12 @@ namespace Distenka.Client.Internal
 			if (options.Timeout <= TimeSpan.Zero && options.Timeout != Timeout.InfiniteTimeSpan)
 				failures.Add($"DistenkaClientOptions.Timeout must be positive or Timeout.InfiniteTimeSpan; it is {options.Timeout}.");
 
+			if (options.MaxRetries < 0 || options.MaxRetries > 10)
+				failures.Add($"DistenkaClientOptions.MaxRetries must be between 0 and 10; it is {options.MaxRetries}.");
+
+			if (options.MaxRetryDelay <= TimeSpan.Zero || options.MaxRetryDelay > TimeSpan.FromMinutes(10))
+				failures.Add($"DistenkaClientOptions.MaxRetryDelay must be positive and at most 10 minutes; it is {options.MaxRetryDelay}.");
+
 			if (options.UserAgent is string userAgent && userAgent.Trim().Length > 0)
 			{
 				using var probe = new HttpRequestMessage();

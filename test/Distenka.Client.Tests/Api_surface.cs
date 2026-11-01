@@ -54,6 +54,8 @@ namespace Distenka.Client.Tests
 			"Distenka.Client.DistenkaClientOptions::AllowInsecureHttp",
 			"Distenka.Client.DistenkaClientOptions::BaseAddress",
 			"Distenka.Client.DistenkaClientOptions::Credential",
+			"Distenka.Client.DistenkaClientOptions::MaxRetries",
+			"Distenka.Client.DistenkaClientOptions::MaxRetryDelay",
 			"Distenka.Client.DistenkaClientOptions::Timeout",
 			"Distenka.Client.DistenkaClientOptions::UserAgent",
 			"Distenka.Client.DistenkaErrorCodes",
