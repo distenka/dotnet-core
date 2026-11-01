@@ -48,5 +48,12 @@ namespace Distenka.Client.Invocations
 		/// </summary>
 		[JsonIgnore]
 		public RunState State => RunStateNames.Parse(Status);
+
+		/// <summary>
+		/// Reads the run summary the processor wrote as the last line of <see cref="Output"/> (DCS-046) — its disposition,
+		/// item counts and <c>FinalizeAsync</c> output. <see langword="null"/> while the run is unfinished and when the
+		/// output has no summary (see <see cref="RunOutputSummary.TryParse"/>).
+		/// </summary>
+		public RunOutputSummary? TryParseSummary() => RunOutputSummary.TryParse(Output);
 	}
 }

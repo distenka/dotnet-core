@@ -19,6 +19,12 @@ public class PlatformCallerConfig : Config
 
     /// <summary>When set, the processor fails after building its client, to exercise the failure output.</summary>
     public bool Fail { get; set; }
+
+    /// <summary>
+    /// DCS-046: when set, the processor carelessly puts the key into everything the SDK copies onto stdout — the item
+    /// category, the failure's exception message and the FinalizeAsync output — so the tests prove the SDK redacts it.
+    /// </summary>
+    public bool EchoKey { get; set; }
 }
 
 /// <summary>
@@ -56,8 +62,11 @@ public class PlatformCallerProcessor : Processor<PlatformCallerConfig>
         _ = client.Runs;
 
         if (Config.Fail)
-            throw new InvalidOperationException("Submitting the child run failed.");
+            throw new InvalidOperationException(Config.EchoKey ? $"Submitting the child run failed with {token}." : "Submitting the child run failed.");
 
-        return Result.Success();
+        return Config.EchoKey ? Result.Success(token) : Result.Success();
     }
+
+    public override Task<object?> FinalizeAsync(Disposition disposition) =>
+        Task.FromResult<object?>(Config.EchoKey ? new { submittedWith = Config.DistenkaApiKey } : null);
 }

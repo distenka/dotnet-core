@@ -23,7 +23,9 @@ namespace Distenka.Tests.Scenarios.Running
 		static void ShouldBePlainLinesOnly(ProcessRun run)
 		{
 			run.Stdout.Should().NotBeEmpty(run.ToString());
-			run.Stdout.Should().OnlyContain(l => LevelLine.IsMatch(l), run.ToString());
+			// Every line is LEVEL: message, except the last: the run summary (DCS-046).
+			run.Stdout.Take(run.Stdout.Count - 1).Should().OnlyContain(l => LevelLine.IsMatch(l), run.ToString());
+			run.Summary.Should().NotBeNull("the last line is the run summary; " + run);
 			run.Stdout.Should().NotContain(l => l.Contains('\u001b'), "no ANSI escape sequences; " + run);
 			run.Stderr.Should().BeEmpty(run.ToString());
 		}
@@ -57,7 +59,8 @@ namespace Distenka.Tests.Scenarios.Running
 
 			run.ExitCode.Should().Be(0, run.ToString());
 			ShouldBePlainLinesOnly(run);
-			run.Stdout.Last().Should().Be("INFO: Disposition=Successful", run.ToString());
+			run.Stdout[run.Stdout.Count - 2].Should().Be("INFO: Disposition=Successful", run.ToString());
+			run.Summary.Value<string>("disposition").Should().Be("Successful", run.ToString());
 		}
 
 		[Fact]

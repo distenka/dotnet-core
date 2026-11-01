@@ -92,9 +92,10 @@ namespace Distenka.Hosting
 			exception is null ? "unknown error" : $"{exception.GetType().FullName}: {exception.Message}";
 
 		/// <summary>
-		/// Builds an <c>ERROR:</c> line: one physical line, escaped and capped as ADR-009 §2.2 requires.
+		/// Builds an <c>ERROR:</c> line: one physical line, escaped and capped as ADR-009 §2.2 requires, with key-shaped
+		/// values redacted (<see cref="SecretText"/>, DCS-046) — the reason may quote an exception message.
 		/// </summary>
-		public static string ErrorLine(string reason) => ToSingleLine("ERROR: " + reason);
+		public static string ErrorLine(string reason) => ToSingleLine(SecretText.Redact("ERROR: " + reason));
 
 		/// <summary>
 		/// Indicates whether <paramref name="text"/> would make the executor flag the run as failed when written to stdout:

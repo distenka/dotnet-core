@@ -19,6 +19,8 @@ namespace Distenka.Hosting
         private readonly ILogger<RunAction> _logger;
 		private readonly bool _debug;
 		private readonly bool _forcePlain;
+		private Execution _execution;
+		private ResultLog _log;
 
 		internal Config Config => _config;
 
@@ -40,7 +42,15 @@ namespace Distenka.Hosting
 			// returning a code) keeps every existing `async Task Main` → RunProcessorAsync() processor unchanged.
 			Environment.ExitCode = RunOutcome.FailureExitCode;
 
+			// Under the executor stdout is always redirected, so the summary line (DCS-046) is always written there; on a
+			// terminal the interactive UI shows the result instead. Independent of --silent: like the ERROR: line, the
+			// summary is part of the executor contract, not UI.
+			var plain = RunOutputOptions.IsPlain(_forcePlain, Console.IsOutputRedirected);
+			if (plain)
+				RunOutputOptions.UseUtf8Output();
+
 			string errorLine = null;
+			var cancelledByHost = false;
 
 			try
 			{
@@ -58,11 +68,14 @@ namespace Distenka.Hosting
 			{
 				// Replaces the former empty `catch { }` that turned every failure into exit 0 (ADR-004 §1.3).
 				errorLine = RunOutcome.DescribeUnhandled(ex, token.IsCancellationRequested);
+				cancelledByHost = ex is OperationCanceledException && token.IsCancellationRequested;
 			}
 			finally
 			{
 				try
 				{
+					var summary = plain ? Summarise(errorLine, cancelledByHost) : null;
+
 					if (errorLine is null)
 					{
 						Environment.ExitCode = RunOutcome.SuccessExitCode;
@@ -76,6 +89,11 @@ namespace Distenka.Hosting
 						// even with --silent: it is part of the executor contract, not UI. Never stderr (§2.3 rule 1).
 						Console.Out.WriteLine(errorLine);
 					}
+
+					// The summary is the last stdout line (ADR-004 §2.4): after the ERROR: line, after every reporter and
+					// logger line (both write synchronously before this point).
+					if (summary != null)
+						Console.Out.WriteLine(summary);
 
 					// Ensure the entire output can be read by the node
 					await Console.Out.FlushAsync();
@@ -95,6 +113,7 @@ namespace Distenka.Hosting
 		private async Task<string> ExecuteAndReportAsync(IServiceProvider services, CancellationToken token)
 		{
 			var execution = services.GetRequiredService<Execution>();
+			_execution = execution;
 			var reporter = CreateReporter();
 
 			reporter.Starting(_config.Process.Type);
@@ -105,8 +124,11 @@ namespace Distenka.Hosting
 			var ProcessCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
 			ResultLog log = null;
 
-			if (_config.Execution.ResultsToConsole || _config.Execution.ResultsToFile)
+			// The summary (DCS-046) lists failed items and the FinalizeAsync output from the log, so plain mode keeps one too.
+			if (_config.Execution.ResultsToConsole || _config.Execution.ResultsToFile || RunOutputOptions.IsPlain(_forcePlain, Console.IsOutputRedirected))
 				log = new ResultLog(execution);
+
+			_log = log;
 
 			var executing = execution.ExecuteAsync(ProcessCancellation.Token);
 
@@ -127,6 +149,45 @@ namespace Distenka.Hosting
 			}
 
 			return RunOutcome.DescribeFailure(execution, token.IsCancellationRequested);
+		}
+
+		/// <summary>
+		/// Builds the summary line for how the run ended (DCS-046, ADR-004 §2.2): from the execution when it completed,
+		/// otherwise without counts (rows 5–6 when the pipeline did not finish). Never throws: a summary that cannot be built
+		/// falls back to one without counts, and to none at all only if even that fails.
+		/// </summary>
+		private string Summarise(string errorLine, bool cancelledByHost)
+		{
+			var processType = _config?.Process?.Type;
+			var execution = _execution;
+
+			Disposition disposition;
+			if (errorLine is null)
+				disposition = Disposition.Successful;
+			else if (execution?.IsComplete == true && execution.Disposition != Disposition.Successful)
+				disposition = execution.Disposition;
+			else
+				disposition = cancelledByHost ? Disposition.Cancelled : Disposition.Failed;
+
+			try
+			{
+				return execution?.IsComplete == true
+					? RunSummary.ForExecution(execution, _log, processType, disposition)
+					: RunSummary.ForIncompleteRun(processType, disposition);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogDebug(ex, "Building the run summary from the execution failed; writing it without counts");
+
+				try
+				{
+					return RunSummary.ForIncompleteRun(processType, disposition);
+				}
+				catch (Exception)
+				{
+					return null;
+				}
+			}
 		}
 
 		private IRunReporter CreateReporter()

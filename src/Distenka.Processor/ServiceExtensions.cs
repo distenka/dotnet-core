@@ -299,7 +299,7 @@ namespace Distenka
 			{
 				// ADR-004 §2.2 row 7 / ADR-002 §2.4: a configuration the package cannot run is reported as one ERROR: line on
 				// stdout and exit code 1 — not as an unhandled exception with a stack trace on stderr.
-				services.AddTransient<IHostedService>(s => new ConfigErrorAction(ex.Message, s.GetRequiredService<IHostApplicationLifetime>()));
+				services.AddTransient<IHostedService>(s => new ConfigErrorAction(ex.Message, s.GetRequiredService<IHostApplicationLifetime>(), s.GetService<RunOutputOptions>()));
 				return;
 			}
 

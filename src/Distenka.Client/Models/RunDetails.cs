@@ -89,5 +89,12 @@ namespace Distenka.Client.Runs
 		/// For runs archived before structured logs, entries come from plain text and have no <see cref="RunTimelineEntry.Level"/>.
 		/// </summary>
 		public IReadOnlyList<RunTimelineEntry> Timeline { get; }
+
+		/// <summary>
+		/// Reads the run summary the processor wrote as the last line of <see cref="Output"/> (DCS-046): its disposition —
+		/// the only place a cancelled run is told apart from a failed one — item counts, failed items and
+		/// <c>FinalizeAsync</c> output. <see langword="null"/> when the output has no summary (see <see cref="RunOutputSummary.TryParse"/>).
+		/// </summary>
+		public RunOutputSummary? TryParseSummary() => RunOutputSummary.TryParse(Output);
 	}
 }

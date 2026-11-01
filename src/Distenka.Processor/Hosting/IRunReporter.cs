@@ -82,8 +82,9 @@ namespace Distenka.Hosting
 		public const string Omitted = "(omitted)";
 
 		/// <summary>
-		/// Returns <paramref name="text"/> on one physical line, or <see cref="Omitted"/> (and counts it) when it contains a
-		/// trigger such as an exception type name used as an item category.
+		/// Returns <paramref name="text"/> on one physical line with key-shaped values redacted (<see cref="SecretText"/>),
+		/// or <see cref="Omitted"/> (and counts it) when it contains a trigger such as an exception type name used as an
+		/// item category.
 		/// </summary>
 		public static string Safe(string text, ref int omitted)
 		{
@@ -93,7 +94,7 @@ namespace Distenka.Hosting
 				return Omitted;
 			}
 
-			return RunOutcome.ToSingleLine(text);
+			return RunOutcome.ToSingleLine(SecretText.Redact(text));
 		}
 	}
 }

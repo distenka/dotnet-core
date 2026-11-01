@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -52,6 +54,19 @@ namespace Distenka.Tests
 		public IReadOnlyList<string> Stderr { get; init; }
 
 		public IEnumerable<string> ErrorLines => Stdout.Where(l => l.StartsWith("ERROR:", StringComparison.Ordinal));
+
+		/// <summary>The run summary (DCS-046) parsed from the last stdout line; <c>null</c> when the last line is not one.</summary>
+		public JObject Summary => Stdout.Count > 0 ? ParseSummary(Stdout[Stdout.Count - 1]) : null;
+
+		/// <summary>Parses a run summary line; <c>null</c> when <paramref name="line"/> is not one. Strings stay strings (no date parsing).</summary>
+		public static JObject ParseSummary(string line)
+		{
+			if (line == null || !line.StartsWith("{\"distenkaSummary\":", StringComparison.Ordinal))
+				return null;
+
+			using var reader = new JsonTextReader(new StringReader(line)) { DateParseHandling = DateParseHandling.None };
+			return JObject.Load(reader);
+		}
 
 		public override string ToString() =>
 			$"exit {ExitCode}{Environment.NewLine}--- stdout ---{Environment.NewLine}{string.Join(Environment.NewLine, Stdout)}" +

@@ -133,6 +133,38 @@ INFO: Disposition=Successful
 
 The contract is recorded in `docs/adr/ADR-009-sandbox-logging-contract.md` and `docs/adr/ADR-004-exit-code-and-stdout-contract.md`.
 
+### The run summary (last stdout line)
+
+In plain mode — always on the platform, and with `run --plain` — the **last** stdout line of every run is one JSON object, the run summary. It comes after the `ERROR:` line when the run failed, and is written for successful, failed, cancelled and configuration-error runs alike (not for a process that is killed):
+
+```json
+{"distenkaSummary":1,"disposition":"Failed","process":"MyJobs.Import","totalItems":3,"successfulItems":2,"failedItems":1,
+ "categories":[{"category":"Rejected","count":1,"successful":false},{"category":"Successful","count":2,"successful":true}],"categoriesNotListed":0,
+ "methods":{"initializeAsync":"Successful","getItemsAsync":"Successful","finalizeAsync":"Successful"},
+ "failures":[{"id":"2","category":"Rejected","message":"Customer 2 has no plan"}],"failuresNotListed":0,
+ "output":{"processed":3},"outputTruncated":false,"outputOmitted":false,"omitted":0,
+ "startedAt":"2026-11-01T10:00:00.000Z","completedAt":"2026-11-01T10:00:05.250Z"}
+```
+
+(shown wrapped; it is one line)
+
+- `distenkaSummary` is the schema version and the marker that tells this line from JSON your processor prints itself. Newer versions only add members.
+- `disposition` is `Successful`, `Failed` or `Cancelled`. The exit code is only 0/1 and the platform state only Completed/Failed, so this is the one place a cancelled run is told apart from a failed one.
+- `output` is what `FinalizeAsync` returned, as JSON.
+- At most 10 `categories` and 10 `failures` are listed; the rest are counted in `categoriesNotListed` / `failuresNotListed`. Texts are cut at 256 characters.
+- A failure's `message` is only written when the run did not succeed. On a successful run, any category, item id or output containing `Exception`, `error:` or `ERROR:` is replaced by `(omitted)` (the output by `null` with `outputOmitted: true`) and counted in `omitted`, so the summary never fails a successful run.
+- The line is at most 8192 characters (ADR-009): a text `output` that does not fit is cut (ending in `…`), a structured one is dropped, both with `outputTruncated: true`.
+- Values shaped like a Distenka key (`DK-`/`DKI-` + 32 or more hex digits) are cut to their public prefix (`DK-0123ABCD…`), here and in the SDK's other output lines.
+- The platform keeps the first 2000 lines of output: when your processor prints more, the summary is not in `output`. Keep item-level results in the results file (`execution.resultsToFile`).
+
+Read it from a client with `RunDetails.TryParseSummary()` (or `RunResult.TryParseSummary()` with a run capability):
+
+```csharp
+var details = await client.Runs.GetDetailsAsync(runId);
+var summary = details.TryParseSummary();          // null when the output has no summary
+if (summary?.Disposition == RunDisposition.Cancelled) { /* … */ }
+```
+
 ### Reading execution logs (Distenka.Client)
 
 A run's log is read from the run itself — there is **no logs endpoint** (AD-13, `docs/adr/ADR-007-result-retrieval-over-rest.md`):
