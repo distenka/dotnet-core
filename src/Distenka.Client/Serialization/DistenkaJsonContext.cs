@@ -19,6 +19,7 @@ namespace Distenka.Client.Serialization
 	[JsonSerializable(typeof(RunSummary))]
 	[JsonSerializable(typeof(CancelResult))]
 	[JsonSerializable(typeof(InvocationAccepted))]
+	[JsonSerializable(typeof(RunResult))]
 	[JsonSerializable(typeof(RunState))]
 	internal sealed partial class DistenkaJsonContext : JsonSerializerContext
 	{

@@ -2,6 +2,7 @@
 using Distenka.Client.Resilience;
 using System;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
@@ -74,8 +75,11 @@ namespace Distenka.Client.Internal
 		/// The operation is documented as safe to repeat although it is neither <c>GET</c>/<c>HEAD</c> nor carries an
 		/// <c>Idempotency-Key</c> (e.g. cancelling a run: "repeating a cancel is safe").
 		/// </param>
+		/// <param name="acceptNotModified">
+		/// Also return a <c>304 Not Modified</c> (conditional reads with <c>If-None-Match</c>, DCS-062) instead of treating it as a failure.
+		/// </param>
 		internal async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> createRequest, HttpCompletionOption completionOption,
-			CancellationToken cancellationToken, bool replaySafe = false)
+			CancellationToken cancellationToken, bool replaySafe = false, bool acceptNotModified = false)
 		{
 			if (createRequest == null)
 				throw new ArgumentNullException(nameof(createRequest));
@@ -99,7 +103,7 @@ namespace Distenka.Client.Internal
 					continue;
 				}
 
-				if (response.IsSuccessStatusCode)
+				if (response.IsSuccessStatusCode || (acceptNotModified && response.StatusCode == HttpStatusCode.NotModified))
 					return response;
 
 				DistenkaApiException error;

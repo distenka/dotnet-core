@@ -17,9 +17,23 @@ namespace Distenka.Client.Invocations
 	{
 		internal const string CallbackUrlHeader = "Callback-Url";
 
-		internal InvocationsClient(HttpTransport transport) => Transport = transport;
+		internal InvocationsClient(HttpTransport transport)
+		{
+			Transport = transport;
+			Results = new RunResultClient(transport);
+		}
 
 		internal HttpTransport Transport { get; }
+
+		internal RunResultClient Results { get; }
+
+		public Task<RunResultResponse> GetResultAsync(RunCapabilityCredential capability, string? etag = null,
+			CancellationToken cancellationToken = default) =>
+			Results.GetResultAsync(capability, etag, cancellationToken);
+
+		public Task<RunResult> WaitForResultAsync(RunCapabilityCredential capability, PollingOptions? options = null,
+			CancellationToken cancellationToken = default) =>
+			Results.WaitForResultAsync(capability, options, cancellationToken);
 
 		public Task<InvocationAccepted> InvokeAsync<TInput>(string pluginId, TInput input, JsonTypeInfo<TInput> inputTypeInfo,
 			InvokeOptions? options = null, CancellationToken cancellationToken = default)
